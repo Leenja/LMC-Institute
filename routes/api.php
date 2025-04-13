@@ -8,7 +8,7 @@ use App\Http\Controllers\StaffController;
 Route::post('LoginSuperAdmin', [AuthController::class, 'login']);
 Route::post('login', [AuthController::class, 'login']);
 Route::post('registerGuest', [AuthController::class, 'registerGuest']);
-//commentt
+
 
 // Super Admin routes
 Route::middleware(['auth:api', 'role:SuperAdmin'])->prefix('super-admin')->group(function () {
