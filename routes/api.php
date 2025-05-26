@@ -232,6 +232,8 @@ Route::get('getFilesByLanguage/{id}', [LibraryController::class, 'getFilesByLang
 
 Route::get('downloadFile/{id}', [LibraryController::class, 'downloadFile']);
 
+Route::get('getHoliday', [HolidayController::class, 'getHoliday']);
+
 // Authenticated routes (all logged-in users)
 Route::middleware(['auth:api'])->group(function () {
     Route::get('profile', [AuthController::class, 'profile']);

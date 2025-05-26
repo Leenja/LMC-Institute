@@ -101,6 +101,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'editMyInfo',
             'removeMyInfo',
             'addHoliday',
+            'getHoliday',
             'assignTaskToSecretary',
         ];
 
@@ -147,6 +148,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'editFileInLibrary',
                 'deleteFileInLibrary',
                 'deleteLibraryForLanguage',
+                'getHoliday',
             ],
             'Teacher' => [
                 'registerGuest',
@@ -181,6 +183,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'getAnnouncement',
                 'getAllAnnouncements',
                 'assignTaskToSecretary',
+                'getHoliday',
             ],
             'Logistic' => [
                 'registerGuest',
@@ -196,6 +199,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'viewCourse',
                 'viewCourseDetails',
                 'getCourseLessons',
+                'getHoliday',
             ],
             'Student' => [
               'registerGuest',
@@ -224,6 +228,7 @@ class RolesAndPermissionsSeeder extends Seeder
               'showAllLanguage',
               'getAnnouncement',
               'getAllAnnouncements',
+              'getHoliday',
             ],
             'Guest' => [
                 'registerGuest',
@@ -240,6 +245,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'showAllLanguage',
                 'getAnnouncement',
                 'getAllAnnouncements',
+                'getHoliday',
             ],
         ];
 
