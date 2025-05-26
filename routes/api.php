@@ -88,11 +88,17 @@ Route::middleware(['auth:api', 'role:Teacher|SuperAdmin'])->prefix('teacher')->g
 
     Route::get('reviewStudentsNames/{courseId}', [StaffController::class, 'reviewStudentsNames']);
 
-    //Route::post('addTest', [StaffController::class, 'addTest']);
+    Route::post('addSelfTest', [StaffController::class, 'addSelfTest']);
 
-    //Route::post('editTest', [StaffController::class, 'editTest']);
+    Route::post('addSelfTestQuestion', [StaffController::class, 'addSelfTestQuestion']);
 
-    //Route::post('deleteTest', [StaffController::class, 'deleteTest']);
+    Route::post('editSelfTest', [StaffController::class, 'editSelfTest']);
+
+    Route::post('editSelfTestQuestion', [StaffController::class, 'editSelfTestQuestion']);
+
+    Route::delete('deleteSelfTest/{selfTestId}', [StaffController::class, 'deleteSelfTest']);
+
+    Route::delete('deleteSelfTestQuestion/{selfTestQuestionId}', [StaffController::class, 'deleteSelfTestQuestion']);
 
     Route::post('editComplaint/{complaint}', [ComplaintController::class, 'editComplaint']);
 

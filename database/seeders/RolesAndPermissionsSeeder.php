@@ -103,6 +103,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'addHoliday',
             'getHoliday',
             'assignTaskToSecretary',
+            'addSelfTest',
+            'addSelfTestQuestion',
+            'editSelfTest',
+            'editSelfTestQuestion',
+            'deleteSelfTest',
+            'deleteSelfTestQuestion',
         ];
 
         // Create all permissions
@@ -156,6 +162,12 @@ class RolesAndPermissionsSeeder extends Seeder
                 'logout',
                 'editMyInfo',
                 'removeMyInfo',
+                'addSelfTest',
+                'addSelfTestQuestion',
+                'editSelfTest',
+                'editSelfTestQuestion',
+                'deleteSelfTest',
+                'deleteSelfTestQuestion',
                 'addFlashcard',
                 'editFlashcard',
                 'deleteFlashcard',

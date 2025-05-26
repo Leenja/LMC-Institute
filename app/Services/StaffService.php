@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\Lesson;
 use App\Models\Room;
+use App\Models\SelfTestQuestion;
 
 class StaffService
 {
@@ -531,27 +532,61 @@ class StaffService
         return ['success' => 'Attendance record created'];
     }
 
-    //Add,edit,delete Test
-    /*
-    public function addTest($data)
+    //Add,edit,delete Self Test
+    public function addSelfTest($data)
     {
         return DB::transaction(function () use ($data) {
-            return $this->staffRepository->createTest($data);
+            return $this->staffRepository->createSelfTest($data);
         });
     }
 
-    public function editTest($data)
+    public function editSelfTest($data)
     {
         return DB::transaction(function () use ($data) {
-            return $this->staffRepository->updateTest($data);
+            return $this->staffRepository->updateSelfTest($data);
         });
     }
 
-    public function deleteTest($testId)
+    public function deleteSelfTest($selfTestId)
     {
-        return DB::transaction(function () use ($testId) {
-            return $this->staffRepository->deleteTest($testId);
+        return DB::transaction(function () use ($selfTestId) {
+            return $this->staffRepository->deleteSelfTest($selfTestId);
         });
-    }*/
+    }
+
+    public function addSelfTestQuestion(array $data)
+    {
+        return SelfTestQuestion::create([
+            'SelfTestId' => $data['SelfTestId'],
+            'Media' => $data['Media'] ?? null,
+            'QuestionText' => $data['QuestionText'],
+            'Type' => $data['Type'],
+            'Choices' => $data['Choices'] ?? null,
+            'CorrectAnswer' => $data['CorrectAnswer'] ?? null,
+        ]);
+    }
+
+    public function editSelfTestQuestion(array $data)
+    {
+        $question = SelfTestQuestion::findOrFail($data['SelfTestQuestionId']);
+
+        $question->update([
+            'Media' => $data['Media'] ?? $question->Media,
+            'QuestionText' => $data['QuestionText'],
+            'Type' => $data['Type'],
+            'Choices' => $data['Choices'] ?? null,
+            'CorrectAnswer' => $data['CorrectAnswer'] ?? null,
+        ]);
+
+        return $question;
+    }
+
+    public function deleteSelfTestQuestion($id)
+    {
+        $question = SelfTestQuestion::findOrFail($id);
+        $question->delete();
+
+        return true;
+    }
 
 }

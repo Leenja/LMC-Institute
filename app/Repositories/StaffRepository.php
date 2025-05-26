@@ -8,8 +8,8 @@ use App\Models\User;
 use App\Models\Enrollment;
 use App\Models\FlashCard;
 use App\Models\Lesson;
+use App\Models\SelfTest;
 use App\Models\StudentProgress;
-use App\Models\Test;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
@@ -298,39 +298,33 @@ class StaffRepository
         return true;
     }
 
-    //Add,edit,delete Test
-    /*
-    public function createTest($data)
+    //Add,edit,delete Self Test
+    public function createSelfTest($data)
     {
-        return Test::create([
-            'CourseId' => $data['CourseId'],
-            'TeacherId' => $data['TeacherId'],
+        return SelfTest::create([
+            'LessonId' => $data['LessonId'],
             'Title' => $data['Title'],
-            'Duration' => $data['Duration'],
-            'Mark' => $data['Mark'],
+            'Description' => $data['Description'],
         ]);
     }
 
-    public function updateTest($data)
+    public function updateSelfTest($data)
     {
-        $test = Test::findOrFail($data['TestId']);
+        $selftest = SelfTest::findOrFail($data['SelfTestId']);
 
-        $test->update([
+        $selftest->update([
             'Title' => $data['Title'],
-            'Duration' => $data['Duration'],
-            'Mark' => $data['Mark'],
+            'Description' => $data['Description'],
         ]);
 
-        return $test;
+        return $selftest;
     }
 
-    public function deleteTest($testId)
+    public function deleteSelfTest($selftestId)
     {
-        $test = Test::findOrFail($testId);
-        $test->delete();
+        $selftest = SelfTest::findOrFail($selftestId);
+        $selftest->delete();
 
         return true;
     }
-*/
-
 }
