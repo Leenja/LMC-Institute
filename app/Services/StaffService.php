@@ -294,6 +294,17 @@ class StaffService
 
             Lesson::insert($lessons);
 
+            //Delete old enrollment_days
+            DB::table('enrollment_days')->where('CourseId', $data['CourseId'])->delete();
+
+            //Generate new enrollment_days
+            $enrollmentDays = $this->generateEnrollmentDays(
+                $data['CourseId'],
+                $data['Start_Enroll'],
+                $data['End_Enroll']
+            );
+            DB::table('enrollment_days')->insert($enrollmentDays);
+
             return [
                 'UpdatedSchedule' => true,
                 'Lessons' => $lessons,
@@ -315,11 +326,9 @@ class StaffService
         // BEFORE: Get today's date and time
         $today = Carbon::now()->toDateString();
 
-        // Fetch all courses
-        $courses = Course::all();
+        $courses = Course::with(['User', 'Language', 'CourseSchedule'])->get();
 
         $schedules = CourseSchedule::with('Course')->get();
-
 
         // AFTER: Update the status based on today's date
         foreach ($schedules as $schedule) {
@@ -345,21 +354,21 @@ class StaffService
 
     public function viewCourse($courseId)
     {
-        $course = Course::find($courseId);
+        $course = Course::with(['User', 'Language', 'CourseSchedule'])->find($courseId);
 
         return $course;
     }
 
     public function viewCourseDetails($courseId)
     {
-        $schedule = CourseSchedule::where('CourseId', $courseId)->first();
+        $schedule = CourseSchedule::with(['Course.Language', 'Course.User', 'Room'])->where('CourseId', $courseId)->first();
 
         return $schedule;
     }
 
     public function getCourseLessons($courseId)
     {
-        return Lesson::where('CourseId', $courseId)->get();
+        return Lesson::with('Course.Language', 'Course.User', 'Course.User')->where('CourseId', $courseId)->get();
     }
 
     //Teacher---------------------------------------------------------

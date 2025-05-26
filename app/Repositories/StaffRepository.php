@@ -225,7 +225,7 @@ class StaffRepository
         ->whereHas('Course', function ($query) use ($teacherId) {
             $query->where('TeacherId', $teacherId);
         })
-        ->with('Course')->get();
+        ->with('Course.Language','Course.User')->get();
     }
 
     //Update student's progress

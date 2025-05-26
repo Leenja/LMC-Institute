@@ -67,6 +67,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'viewFlashCard',
             'viewAllTeacherFlashCards',
             'viewTeacherFlashCard',
+            'viewLessonFlashCards',
+            'viewCourseFlashCards',
+            'viewFlashCardsByLesson',
+            'viewFlashCardsByCourse',
             'viewRoadmap',
             'viewCourses',
             'viewCourse',
@@ -97,6 +101,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'editMyInfo',
             'removeMyInfo',
             'addHoliday',
+            'assignTaskToSecretary',
         ];
 
         // Create all permissions

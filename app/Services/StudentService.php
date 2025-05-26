@@ -24,7 +24,7 @@ class StudentService
     public function getEnrolledCourses($studentId)
     {
         return Enrollment::where('StudentId', $studentId)
-        ->with('course.CourseSchedule')->get()->pluck('course');
+        ->with('course.CourseSchedule.Room','course.Language','course.User')->get()->pluck('course');
     }
 
     //View my lessons for a course
@@ -36,7 +36,7 @@ class StudentService
             return ['error' => 'You are not enrolled in this course.'];
         }
 
-        return Lesson::where('CourseId', $courseId)->get();
+        return Lesson::where('CourseId', $courseId)->with('Course.CourseSchedule.Room','Course.Language','Course.User')->get();
     }
 
     //View teachers

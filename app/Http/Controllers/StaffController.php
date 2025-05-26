@@ -337,7 +337,7 @@ class StaffController extends Controller
     public function reviewMyCourses() {
         $teacherId = auth()->user()->id;
 
-        $courses = Course::where('TeacherId', $teacherId)->with('CourseSchedule')->get();
+        $courses = Course::where('TeacherId', $teacherId)->with('CourseSchedule.Room', 'Language','User')->get();
 
         return response()->json([
             'My Courses' => $courses
