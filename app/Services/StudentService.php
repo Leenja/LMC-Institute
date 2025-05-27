@@ -7,6 +7,9 @@ use App\Models\Enrollment;
 use App\Models\FlashCard;
 use App\Models\Lesson;
 use App\Models\Notes;
+use App\Models\SelfTest;
+use App\Models\SelfTestProgress;
+use App\Models\SelfTestQuestion;
 use App\Models\User;
 use App\Repositories\StudentRepository;
 use Carbon\Carbon;
@@ -81,6 +84,41 @@ class StudentService
             ->select('id', 'name', 'email')
             ->with(['staffInfo:id,UserId,Photo,Description'])
             ->first();
+    }
+
+    //Take self test
+    public function getSelfTestQuestions($studentId, $selfTestId)
+    {
+        $selfTest = SelfTest::with('Lesson.Course')->find($selfTestId);
+        if (!$selfTest) {
+            return ['error' => 'Self test not found'];
+        }
+
+        $course = $selfTest->Lesson->Course;
+
+        $isEnrolled = Enrollment::where('StudentId', $studentId)
+                                ->where('CourseId', $course->id)->exists();
+
+        if (!$isEnrolled) {
+            return ['error' => 'You are not enrolled in this course'];
+        }
+
+        $progress = SelfTestProgress::where('StudentId', $studentId)->where('SelfTestId', $selfTestId)->first();
+
+        $lastAnswered = $progress?->LastAnsweredQuestionId;
+
+        $allQuestions = SelfTestQuestion::where('SelfTestId', $selfTestId)
+                                        ->orderBy('id')->pluck('id')->toArray();
+
+        $nextQuestion = $lastAnswered
+        ? collect($allQuestions)->first(fn($id) => $id > $lastAnswered)
+        : $allQuestions[0] ?? null;
+
+        if (!$nextQuestion) {
+            return ['message' => 'Test completed'];
+        }
+
+        return $this->studentRepository->getNextSelfTestQuestion($selfTestId,$nextQuestion);
     }
 
     //View flash cards

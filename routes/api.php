@@ -175,6 +175,10 @@ Route::middleware(['auth:api' , 'role:Student|SuperAdmin'])->prefix('student')->
 
     Route::get("viewTeacher/{teacherId}", [StudentController::class,"viewTeacher"]);
 
+    Route::get("getSelfTestQuestions/{selfTestId}", [StudentController::class,"getSelfTestQuestions"]);
+
+    Route::post("submitSelfTestAnswer", [StudentController::class,"submitSelfTestAnswer"]);
+
     Route::get("viewAllFlashCards", [StudentController::class,"viewAllFlashCards"]);
 
     Route::get("viewFlashCard/{flashcardId}", [StudentController::class,"viewFlashCard"]);

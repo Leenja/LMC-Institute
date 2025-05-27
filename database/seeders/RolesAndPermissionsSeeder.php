@@ -109,6 +109,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'editSelfTestQuestion',
             'deleteSelfTest',
             'deleteSelfTestQuestion',
+            'getSelfTestQuestions',
+            'submitSelfTestAnswer',
         ];
 
         // Create all permissions
@@ -241,6 +243,8 @@ class RolesAndPermissionsSeeder extends Seeder
               'getAnnouncement',
               'getAllAnnouncements',
               'getHoliday',
+              'getSelfTestQuestions',
+              'submitSelfTestAnswer',
             ],
             'Guest' => [
                 'registerGuest',
