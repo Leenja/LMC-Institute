@@ -243,16 +243,11 @@ Route::get('getFilesByLanguage/{id}', [LibraryController::class, 'getFilesByLang
 
 Route::get('downloadFile/{id}', [LibraryController::class, 'downloadFile']);
 
-<<<<<<< HEAD
 Route::post('sendNotification', [SendNotificationController::class, 'sendNotification']);
 
 Route::get('getHoliday', [HolidayController::class, 'getHoliday']);
 
 
-=======
-Route::get('getHoliday', [HolidayController::class, 'getHoliday']);
-
->>>>>>> 6198dccf2ba38d73ccceeaff3cc6d161934e5403
 // Authenticated routes (all logged-in users)
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('profile', [AuthController::class, 'profile']);
