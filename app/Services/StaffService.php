@@ -297,10 +297,10 @@ class StaffService
 
             Lesson::insert($lessons);
 
-            // ✅ حذف أيام التسجيل القديمة
+            //Delete old enrollment_days
             DB::table('enrollment_days')->where('CourseId', $data['CourseId'])->delete();
 
-            // ✅ توليد أيام تسجيل جديدة
+            //Generate new enrollment_days
             $enrollmentDays = $this->generateEnrollmentDays(
                 $data['CourseId'],
                 $data['Start_Enroll'],
@@ -564,6 +564,29 @@ class StaffService
             'Choices' => $data['Choices'] ?? null,
             'CorrectAnswer' => $data['CorrectAnswer'] ?? null,
         ]);
+    }
+
+    public function editSelfTestQuestion(array $data)
+    {
+        $question = SelfTestQuestion::findOrFail($data['SelfTestQuestionId']);
+
+        $question->update([
+            'Media' => $data['Media'] ?? $question->Media,
+            'QuestionText' => $data['QuestionText'],
+            'Type' => $data['Type'],
+            'Choices' => $data['Choices'] ?? null,
+            'CorrectAnswer' => $data['CorrectAnswer'] ?? null,
+        ]);
+
+        return $question;
+    }
+
+    public function deleteSelfTestQuestion($id)
+    {
+        $question = SelfTestQuestion::findOrFail($id);
+        $question->delete();
+
+        return true;
     }
 
     public function editSelfTestQuestion(array $data)

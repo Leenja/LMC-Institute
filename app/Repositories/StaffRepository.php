@@ -327,5 +327,4 @@ class StaffRepository
 
         return true;
     }
-
 }
