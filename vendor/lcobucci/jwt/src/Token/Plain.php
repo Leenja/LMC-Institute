@@ -4,24 +4,17 @@ declare(strict_types=1);
 namespace Lcobucci\JWT\Token;
 
 use DateTimeInterface;
-use Lcobucci\JWT\Token as TokenInterface;
+use Lcobucci\JWT\UnencryptedToken;
 
 use function in_array;
 
-final class Plain implements TokenInterface
+final class Plain implements UnencryptedToken
 {
-    private DataSet $headers;
-    private DataSet $claims;
-    private Signature $signature;
-
     public function __construct(
-        DataSet $headers,
-        DataSet $claims,
-        Signature $signature
+        private readonly DataSet $headers,
+        private readonly DataSet $claims,
+        private readonly Signature $signature,
     ) {
-        $this->headers   = $headers;
-        $this->claims    = $claims;
-        $this->signature = $signature;
     }
 
     public function headers(): DataSet

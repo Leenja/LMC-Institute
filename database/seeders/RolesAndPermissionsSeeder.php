@@ -67,6 +67,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'viewFlashCard',
             'viewAllTeacherFlashCards',
             'viewTeacherFlashCard',
+            'viewLessonFlashCards',
+            'viewCourseFlashCards',
+            'viewFlashCardsByLesson',
+            'viewFlashCardsByCourse',
             'viewRoadmap',
             'viewCourses',
             'viewCourse',
@@ -97,13 +101,24 @@ class RolesAndPermissionsSeeder extends Seeder
             'editMyInfo',
             'removeMyInfo',
             'addHoliday',
+            'getHoliday',
+            'assignTaskToSecretary',
+            'addSelfTest',
+            'addSelfTestQuestion',
+            'editSelfTest',
+            'editSelfTestQuestion',
+            'deleteSelfTest',
+            'deleteSelfTestQuestion',
+            'getSelfTestQuestions',
+            'submitSelfTestAnswer',
         ];
 
         // Create all permissions
         foreach ($allApplicationPermissions as $permission) {
             Permission::firstOrCreate([
                 'name' => $permission,
-                'guard_name' => 'api'
+                //'guard_name' => 'api'
+                'guard_name' => 'sanctum'
             ]);
         }
 
@@ -142,6 +157,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'editFileInLibrary',
                 'deleteFileInLibrary',
                 'deleteLibraryForLanguage',
+                'getHoliday',
             ],
             'Teacher' => [
                 'registerGuest',
@@ -149,6 +165,12 @@ class RolesAndPermissionsSeeder extends Seeder
                 'logout',
                 'editMyInfo',
                 'removeMyInfo',
+                'addSelfTest',
+                'addSelfTestQuestion',
+                'editSelfTest',
+                'editSelfTestQuestion',
+                'deleteSelfTest',
+                'deleteSelfTestQuestion',
                 'addFlashcard',
                 'editFlashcard',
                 'deleteFlashcard',
@@ -176,6 +198,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'getAnnouncement',
                 'getAllAnnouncements',
                 'assignTaskToSecretary',
+                'getHoliday',
             ],
             'Logistic' => [
                 'registerGuest',
@@ -191,6 +214,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'viewCourse',
                 'viewCourseDetails',
                 'getCourseLessons',
+                'getHoliday',
             ],
             'Student' => [
               'registerGuest',
@@ -219,6 +243,9 @@ class RolesAndPermissionsSeeder extends Seeder
               'showAllLanguage',
               'getAnnouncement',
               'getAllAnnouncements',
+              'getHoliday',
+              'getSelfTestQuestions',
+              'submitSelfTestAnswer',
             ],
             'Guest' => [
                 'registerGuest',
@@ -235,6 +262,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'showAllLanguage',
                 'getAnnouncement',
                 'getAllAnnouncements',
+                'getHoliday',
             ],
         ];
 
@@ -242,7 +270,9 @@ class RolesAndPermissionsSeeder extends Seeder
         foreach ($roles as $roleName => $rolePermissions) {
             $role = Role::firstOrCreate([
                 'name' => $roleName,
-                'guard_name' => 'api'
+                //'guard_name' => 'api'
+                'guard_name' => 'sanctum'
+
             ]);
             $role->syncPermissions($rolePermissions);
         }
@@ -252,6 +282,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'name' => 'Super Admin',
             'email' => 'super@admin.com',
             'password' => Hash::make('password'),
+            'role_id' => 1,
         ]);
 
         $superAdminUser->assignRole('SuperAdmin');

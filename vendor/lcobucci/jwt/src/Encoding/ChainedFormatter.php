@@ -7,7 +7,7 @@ use Lcobucci\JWT\ClaimsFormatter;
 
 final class ChainedFormatter implements ClaimsFormatter
 {
-    /** @var list<ClaimsFormatter> */
+    /** @var array<ClaimsFormatter> */
     private array $formatters;
 
     public function __construct(ClaimsFormatter ...$formatters)
@@ -18,6 +18,11 @@ final class ChainedFormatter implements ClaimsFormatter
     public static function default(): self
     {
         return new self(new UnifyAudience(), new MicrosecondBasedDateConversion());
+    }
+
+    public static function withUnixTimestampDates(): self
+    {
+        return new self(new UnifyAudience(), new UnixTimestampDates());
     }
 
     /** @inheritdoc */

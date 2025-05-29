@@ -7,16 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 
 class SelfTest extends Model
 {
-    protected $table = 'selftests';
+    protected $table = 'self_tests';
 
     use HasFactory;
 
     protected $fillable = [
         'LessonId',
-        'Title'
+        'Title',
+        'Description'
     ];
 
     public function Lesson(){
         return $this->belongsTo(Lesson::class, 'LessonId');
+    }
+
+    public function questions()
+    {
+        return $this->hasMany(SelfTestQuestion::class, 'SelfTestId');
     }
 }

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Language;
 use App\Models\LMCInfo;
+use App\Models\SelfTestProgress;
+use App\Models\SelfTestQuestion;
 use App\Models\User;
 use App\Services\StudentService;
 use Illuminate\Http\Request;
@@ -107,8 +109,51 @@ class StudentController extends Controller
 
     }
 
-    public function takeSelfTest() {
+    public function getSelfTestQuestions($selfTestId)
+    {
+        $studentId = auth()->user()->id;
 
+        $questions = $this->studentService->getSelfTestQuestions($studentId, $selfTestId);
+
+        if (isset($questions['error'])) {
+            return response()->json(['message' => $questions['error']], 403);
+        }
+
+        return response()->json([
+            'message' => 'Self test questions retrieved successfully.',
+            'Questions' => $questions,
+        ]);
+    }
+
+    public function submitSelfTestAnswer(Request $request)
+    {
+        $studentId = auth()->user()->id;
+
+        $request->validate([
+            'SelfTestId' => 'required|exists:self_tests,id',
+            'QuestionId' => 'required|exists:self_test_questions,id',
+            'Answer' => 'required',
+        ]);
+
+        $question = SelfTestQuestion::find($request->QuestionId);
+
+        if (!$question || $question->SelfTestId != $request->SelfTestId) {
+            return response()->json(['message' => 'Invalid question for this self test.'], 400);
+        }
+
+        $isCorrect = trim(strtolower($request->Answer)) === trim(strtolower($question->CorrectAnswer));
+
+        // Save progress
+        SelfTestProgress::updateOrCreate(
+            ['StudentId' => $studentId, 'SelfTestId' => $request->SelfTestId],
+            ['LastAnsweredQuestionId' => $request->QuestionId]
+        );
+
+        return response()->json(array_filter([
+            'message' => $isCorrect ? 'Correct answer!' : 'Wrong answer!',
+            'correctAnswer' => $isCorrect ? null : $question->CorrectAnswer,
+            'nextAvailable' => true
+        ], fn($value) => !is_null($value)));
     }
 
     public function addNote(Request $request)

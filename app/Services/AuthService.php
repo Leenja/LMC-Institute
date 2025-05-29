@@ -6,8 +6,12 @@ use App\Models\StaffInfo;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Repositories\RoleRepository;
-use Tymon\JWTAuth\Facades\JWTAuth;
+//use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Auth;
+
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
+
 
 class AuthService
 {
@@ -39,8 +43,9 @@ class AuthService
     }
 
         $permissions = $this->roleRepository->assignRoleToUser($user, $role);
-        $token = JWTAuth::fromUser($user);
+       // $token = JWTAuth::fromUser($user);
 
+       $token = $user->createToken('auth_token')->plainTextToken;
         return [
             'user' => $user,
             'token' => $token,
@@ -50,6 +55,35 @@ class AuthService
     }
 
     public function login(array $credentials)
+{
+    $token = $this->userRepository->attemptLogin($credentials);
+
+    if (!$token) {
+        throw new \Exception('بيانات الدخول غير صحيحة', 401);
+    }
+
+    $user = User::where('email', $credentials['email'])->first();
+    $userData = $this->userRepository->getUserRolesAndPermissions($user);
+
+    return [
+        'token' => $token,
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'email_verified_at' => $user->email_verified_at,
+            'role' => $userData['roles']->first(),
+            'permissions' => $userData['permissions'],
+            'Other Info' => $user->staffInfo ? [
+                'Photo' => $user->staffInfo->Photo,
+                'Description' => $user->staffInfo->Description,
+            ] : null
+        ]
+    ];
+}
+
+ 
+  /*  public function login(array $credentials)
     {
         $token = $this->userRepository->attemptLogin($credentials);
 
@@ -75,9 +109,9 @@ class AuthService
                 ] : null
             ]
         ];
-    }
+    }*/
 
-    public function getMyProfile($userId)
+   /* public function getMyProfile($userId)
     {
         $user = User::with(['roles.permissions'])->findOrFail($userId);
         $userInfo = User::with('staffInfo')->findOrFail($userId);
@@ -91,7 +125,28 @@ class AuthService
                 return $role->permissions->pluck('name');
             })->unique()->values(),
         ];
-    }
+    }*/
+
+
+    public function getMyProfile($userId)
+{
+    $user = User::with(['roles.permissions', 'staffInfo'])->findOrFail($userId);
+
+    return [
+        'id' => $user->id,
+        'name' => $user->name,
+        'email' => $user->email,
+        'roles' => $user->roles->pluck('name'),
+        'permissions' => $user->roles->flatMap(function($role) {
+            return $role->permissions->pluck('name');
+        })->unique()->values(),
+        'Other Info' => $user->staffInfo ? [
+            'Photo' => $user->staffInfo->Photo,
+            'Description' => $user->staffInfo->Description,
+        ] : null
+    ];
+}
+
 
     public function getUserProfile($id)
     {
@@ -112,10 +167,15 @@ class AuthService
         return User::whereIn('role_id', $roleIds)->with(['roles', 'staffInfo'])->get();
     }
 
-    public function logout()
+   /* public function logout()
     {
         $this->userRepository->invalidateToken(JWTAuth::getToken());
-    }
+    }*/
+
+    public function logout()
+{
+    Auth::user()->currentAccessToken()->delete();
+}
 
     public function registerGuest(array $data)
     {
@@ -125,8 +185,9 @@ class AuthService
         $user = $this->userRepository->createGuestUser($data);
         $this->roleRepository->assignGuestRole($user);
 
-        $token = JWTAuth::fromUser($user);
+        //$token = JWTAuth::fromUser($user);
 
+        $token = $user->createToken('auth_token')->plainTextToken;
         return [
             'user' => [
                 'id' => $user->id,

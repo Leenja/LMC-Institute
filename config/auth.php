@@ -18,6 +18,8 @@ return [
         'passwords' => 'users',
     ],*/
 
+    
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Guards
@@ -47,16 +49,38 @@ return [
 ],*/
 
 'defaults' => [
-    'guard' => 'api',
+    'guard' => 'sanctum',
     'passwords' => 'users',
 ],
 
-'guards' => [
+/*'guards' => [
     'api' => [
         'driver' => 'jwt',
         'provider' => 'users',
     ],
+],*/
+
+
+
+'guards' => [
+
+    'sanctum' => [
+        'driver' => 'sanctum',
+        'provider' => 'users',
+    ],
+
+
+   'web' => [
+        'driver' => 'session',
+        'provider' => 'users',
+    ],
+
+    'api' => [
+        'driver' => 'sanctum', // إذا كنت تستخدم Sanctum
+        'provider' => 'users',
+    ],
 ],
+
 
 
 

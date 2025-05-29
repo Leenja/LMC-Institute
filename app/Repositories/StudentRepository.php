@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Notes;
 use App\Models\PlacementTest;
+use App\Models\SelfTestQuestion;
 use App\Models\StudentProgress;
 use Carbon\Carbon;
 
@@ -72,6 +73,14 @@ class StudentRepository
             ];
         }
         return $result;
+    }
+
+    //Take self test
+    public function getNextSelfTestQuestion($selfTestId , $questionId)
+    {
+        return SelfTestQuestion::where('SelfTestId', $selfTestId)
+                ->where('id',$questionId)
+                ->select('id', 'Type', 'Media', 'QuestionText', 'Choices')->first();
     }
 
     //Note

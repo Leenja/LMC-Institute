@@ -10,6 +10,7 @@ use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\SendNotificationController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TaskController;
@@ -22,7 +23,7 @@ Route::post('registerGuest', [AuthController::class, 'registerGuest']);
 
 
 // Super Admin routes
-Route::middleware(['auth:api', 'role:SuperAdmin'])->prefix('super-admin')->group(function () {
+Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
 
     Route::get('showUserInfo/{id}', [AuthController::class, 'showUserInfo']);
@@ -63,7 +64,7 @@ Route::middleware(['auth:api', 'role:SuperAdmin'])->prefix('super-admin')->group
 });
 
 
-Route::middleware(['auth:api', 'role:Teacher|SuperAdmin'])->prefix('teacher')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Teacher|SuperAdmin'])->prefix('teacher')->group(function () {
     Route::post('addFlashcard', [StaffController::class, 'addFlashCard']);
 
     Route::post('editFlashcard', [StaffController::class, 'editFlashCard']);
@@ -88,11 +89,17 @@ Route::middleware(['auth:api', 'role:Teacher|SuperAdmin'])->prefix('teacher')->g
 
     Route::get('reviewStudentsNames/{courseId}', [StaffController::class, 'reviewStudentsNames']);
 
-    //Route::post('addTest', [StaffController::class, 'addTest']);
+    Route::post('addSelfTest', [StaffController::class, 'addSelfTest']);
 
-    //Route::post('editTest', [StaffController::class, 'editTest']);
+    Route::post('addSelfTestQuestion', [StaffController::class, 'addSelfTestQuestion']);
 
-    //Route::post('deleteTest', [StaffController::class, 'deleteTest']);
+    Route::post('editSelfTest', [StaffController::class, 'editSelfTest']);
+
+    Route::post('editSelfTestQuestion', [StaffController::class, 'editSelfTestQuestion']);
+
+    Route::delete('deleteSelfTest/{selfTestId}', [StaffController::class, 'deleteSelfTest']);
+
+    Route::delete('deleteSelfTestQuestion/{selfTestQuestionId}', [StaffController::class, 'deleteSelfTestQuestion']);
 
     Route::post('editComplaint/{complaint}', [ComplaintController::class, 'editComplaint']);
 
@@ -109,7 +116,7 @@ Route::middleware(['auth:api', 'role:Teacher|SuperAdmin'])->prefix('teacher')->g
     Route::post('assignTaskToSecretary', [TaskController::class, 'assignTaskToSecretary']);
 });
 
-Route::middleware(['auth:api', 'role:Secretarya|SuperAdmin'])->prefix('secretarya')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Secretarya|SuperAdmin'])->prefix('secretarya')->group(function () {
     Route::post("enroll", [StaffController::class, "enrollStudent"]);
 
     Route::post("cancelEnrollment", [StaffController::class, "cancelEnrollment"]);
@@ -150,13 +157,13 @@ Route::middleware(['auth:api', 'role:Secretarya|SuperAdmin'])->prefix('secretary
 
 });
 
-Route::middleware(['auth:api' , 'role:Logistic|SuperAdmin'])->prefix('logistic')->group(function() {
+Route::middleware(['auth:sanctum' , 'role:Logistic|SuperAdmin'])->prefix('logistic')->group(function() {
 
     Route::post('createInvoice', [InvoiceController::class, 'createInvoice']);
 
 });
 
-Route::middleware(['auth:api' , 'role:Student|SuperAdmin'])->prefix('student')->group(function() {
+Route::middleware(['auth:sanctum' , 'role:Student|SuperAdmin'])->prefix('student')->group(function() {
     Route::get("viewEnrolledCourses", [StudentController::class,"viewEnrolledCourses"]);
 
     Route::get("viewMyLessons/{course}", [StudentController::class,"viewMyLessons"]);
@@ -168,6 +175,10 @@ Route::middleware(['auth:api' , 'role:Student|SuperAdmin'])->prefix('student')->
     Route::get("viewAvailableCourses", [StudentController::class,"viewAvailableCourses"]);
 
     Route::get("viewTeacher/{teacherId}", [StudentController::class,"viewTeacher"]);
+
+    Route::get("getSelfTestQuestions/{selfTestId}", [StudentController::class,"getSelfTestQuestions"]);
+
+    Route::post("submitSelfTestAnswer", [StudentController::class,"submitSelfTestAnswer"]);
 
     Route::get("viewAllFlashCards", [StudentController::class,"viewAllFlashCards"]);
 
@@ -188,7 +199,7 @@ Route::middleware(['auth:api' , 'role:Student|SuperAdmin'])->prefix('student')->
     Route::get("viewProgress", [StudentController::class,"viewProgress"]);
 });
 
-Route::middleware(['auth:api' , 'role:Guest'])->prefix('guest')->group(function() {
+Route::middleware(['auth:sanctum' , 'role:Guest'])->prefix('guest')->group(function() {
     Route::get("viewAvailableCourses", [StudentController::class,"viewAvailableCourses"]);
 
     Route::get("viewTeachers", [StudentController::class,"viewTeachers"]);
@@ -199,7 +210,7 @@ Route::middleware(['auth:api' , 'role:Guest'])->prefix('guest')->group(function(
 });
 
 //all staff
-Route::middleware(['auth:api' , 'role:Logistic|SuperAdmin|Teacher|Secretarya'])->prefix('staff')->group(function() {
+Route::middleware(['auth:sanctum' , 'role:Logistic|SuperAdmin|Teacher|Secretarya'])->prefix('staff')->group(function() {
     Route::post("editMyInfo", [StaffController::class,"editMyInfo"]);
 
     Route::post("removeMyInfo", [StaffController::class,"removeMyInfo"]);
@@ -232,8 +243,13 @@ Route::get('getFilesByLanguage/{id}', [LibraryController::class, 'getFilesByLang
 
 Route::get('downloadFile/{id}', [LibraryController::class, 'downloadFile']);
 
+Route::post('sendNotification', [SendNotificationController::class, 'sendNotification']);
+
+Route::get('getHoliday', [HolidayController::class, 'getHoliday']);
+
+
 // Authenticated routes (all logged-in users)
-Route::middleware(['auth:api'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('profile', [AuthController::class, 'profile']);
 
     Route::get('getCourseLessons/{courseId}', [StaffController::class, 'getCourseLessons']);

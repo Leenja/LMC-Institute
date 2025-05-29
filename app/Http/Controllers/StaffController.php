@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\CourseSchedule;
 use App\Models\Enrollment;
+use App\Models\Lesson;
+use App\Models\SelfTest;
+use App\Models\SelfTestQuestion;
 use App\Models\StaffInfo;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -337,7 +340,7 @@ class StaffController extends Controller
     public function reviewMyCourses() {
         $teacherId = auth()->user()->id;
 
-        $courses = Course::where('TeacherId', $teacherId)->with('CourseSchedule')->get();
+        $courses = Course::where('TeacherId', $teacherId)->with('CourseSchedule.Room', 'Language','User')->get();
 
         return response()->json([
             'My Courses' => $courses
@@ -411,64 +414,162 @@ class StaffController extends Controller
         return response()->json(['message' => $result['success']]);
     }
 
-    /*
-    public function addTest(Request $request) {
-        $data = $request->validate([
-            'CourseId' => 'required|exists:courses,id',
-            'Title' => 'required|string',
-            'Duration' => 'required|numeric|min:1',
-            'Mark' => 'required|numeric|min:0',
-        ]);
-
-        $data['TeacherId'] = auth()->user()->id;
-
-        $test = $this->staffService->addTest($data);
-
-        return response()->json([
-            'message' => 'Test created successfully.',
-            'Test' => $test,
-        ]);
-    }
-
-    public function editTest(Request $request) {
-        $data = $request->validate([
-            'TestId' => 'required|exists:tests,id',
-            'Title' => 'required|string',
-            'Duration' => 'required|numeric|min:1',
-            'Mark' => 'required|numeric|min:0',
-        ]);
-
-        $test = $this->staffService->editTest($data);
-
-        return response()->json([
-            'message' => 'Test updated successfully.',
-            'Test' => $test,
-        ]);
-    }
-
-    public function deleteTest(Request $request) {
-        $data = $request->validate([
-            'TestId' => 'required|exists:tests,id',
-        ]);
-
-        $this->staffService->deleteTest($data['TestId']);
-
-        return response()->json([
-            'message' => 'Test deleted successfully.',
-        ]);
-    }
-
     public function addSelfTest(Request $request) {
+        $data = $request->validate([
+            'LessonId' => 'required|exists:lessons,id',
+            'Title' => 'required|string',
+            'Description' => 'required|string',
+        ]);
 
+        $lesson = Lesson::with('Course')->find($data['LessonId']);
+        $teacherId = auth()->user()->id;
+
+        if (!$lesson || $lesson->Course->TeacherId !== $teacherId) {
+            return response()->json(['message' => 'You are not authorized to add a self-test to this lesson'], 403);
+        }
+
+        try {
+            $selfTest = $this->staffService->addSelfTest($data);
+            return response()->json(['message' => 'Self test created successfully', 'Self Test' => $selfTest], 201);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
-    public function editSelfTest(Request $request) {
+    public function editSelfTest(Request $request)
+    {
+        $data = $request->validate([
+            'SelfTestId' => 'required|exists:self_tests,id',
+            'Title' => 'required|string|max:255',
+            'Description' => 'required|string',
+        ]);
 
+        $selftest = SelfTest::with('Lesson.Course')->find($data['SelfTestId']);
+        $teacherId = auth()->user()->id;
+
+        if (!$selftest || $selftest->Lesson->Course->TeacherId !== $teacherId) {
+            return response()->json(['message' => 'You are not authorized to edit a self-test to this lesson'], 403);
+        }
+
+        try {
+            $selfTest = $this->staffService->editSelfTest($data);
+            return response()->json(['message' => 'Self test updated successfully', 'Self Test' => $selfTest], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
-    public function deleteSelfTest(Request $request) {
+    public function deleteSelfTest($id)
+    {
+        $selfTest = SelfTest::with('Lesson.Course')->find($id);
+        $teacherId = auth()->user()->id;
 
-    }*/
+        if (!$selfTest || $selfTest->Lesson->Course->TeacherId !== $teacherId) {
+            return response()->json(['message' => 'You are not authorized to delete this self-test'], 403);
+        }
+
+        try {
+            $this->staffService->deleteSelfTest($id);
+            return response()->json(['message' => 'Self test deleted successfully'], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function addSelfTestQuestion(Request $request)
+    {
+        $data = $request->validate([
+            'SelfTestId' => 'required|exists:self_tests,id',
+            'Media' => 'sometimes|file|mimes:m4v,webm,flv,wmv,mov,mkv,avi,mp4,tif,tiff,heic,svg,bmp,webp,gif,png,jpeg,jpg',
+            'QuestionText' => 'required|string',
+            'Type' => 'required|in:MCQ,true_false,translate',
+            'Choices' => 'required_if:Type,MCQ|nullable|json', // Only for MCQ
+            'CorrectAnswer' => 'nullable|string',
+        ]);
+
+        $selfTest = SelfTest::with('Lesson.Course')->find($data['SelfTestId']);
+        $teacherId = auth()->user()->id;
+
+        if (!$selfTest || $selfTest->Lesson->Course->TeacherId !== $teacherId) {
+            return response()->json(['message' => 'You are not authorized to add questions to this self test'], 403);
+        }
+
+        if ($request->hasFile('Media')) {
+            $media = $request->file('Media');
+            $new_name = time() . '_' . $media->getClientOriginalName();
+            $media->move(public_path('storage/selfTestsMedia'), $new_name);
+            $mediaUrl = url('storage/selfTestsMedia/' . $new_name);
+
+            if (!file_exists(public_path('storage/selfTestsMedia/' . $new_name))) {
+                throw new Exception('Failed to upload media', 500);
+            }
+
+            $data['Media'] = $mediaUrl;
+        }
+
+        try {
+            $question = $this->staffService->addSelfTestQuestion($data);
+            return response()->json(['message' => 'Self test question added successfully', 'question' => $question], 201);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function editSelfTestQuestion(Request $request)
+    {
+        $data = $request->validate([
+            'SelfTestQuestionId' => 'required|exists:self_test_questions,id',
+            'Media' => 'sometimes|file|mimes:m4v,webm,flv,wmv,mov,mkv,avi,tif,tiff,heic,svg,bmp,webp,gif,png,jpeg,jpg',
+            'QuestionText' => 'sometimes|string',
+            'Type' => 'sometimes|in:MCQ,true_false,translate',
+            'Choices' => 'required_if:Type,MCQ|nullable|json', // Only for MCQ
+            'CorrectAnswer' => 'nullable|string',
+        ]);
+
+        $question = SelfTestQuestion::with('SelfTest.Lesson.Course')->find($data['SelfTestQuestionId']);
+        $teacherId = auth()->user()->id;
+
+        if (!$question || $question->SelfTest->Lesson->Course->TeacherId !== $teacherId) {
+            return response()->json(['message' => 'You are not authorized to edit this question'], 403);
+        }
+
+        if ($request->hasFile('Media')) {
+            $media = $request->file('Media');
+            $new_name = time() . '_' . $media->getClientOriginalName();
+            $media->move(public_path('storage/selfTestsMedia'), $new_name);
+            $mediaUrl = url('storage/selfTestsMedia/' . $new_name);
+
+            if (!file_exists(public_path('storage/selfTestsMedia/' . $new_name))) {
+                return response()->json(['message' => 'Failed to upload media'], 500);
+            }
+
+            $data['Media'] = $mediaUrl;
+        }
+
+        try {
+            $updatedQuestion = $this->staffService->editSelfTestQuestion($data);
+            return response()->json(['message' => 'Self test question updated successfully', 'question' => $updatedQuestion], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteSelfTestQuestion($id)
+    {
+        $question = SelfTestQuestion::with('SelfTest.Lesson.Course')->find($id);
+        $teacherId = auth()->user()->id;
+
+        if (!$question || $question->SelfTest->Lesson->Course->TeacherId !== $teacherId) {
+            return response()->json(['message' => 'You are not authorized to delete this question'], 403);
+        }
+
+        try {
+            $this->staffService->deleteSelfTestQuestion($id);
+            return response()->json(['message' => 'Self test question deleted successfully'], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 
     public function addFlashCard(Request $request) {
         $data = $request->validate([

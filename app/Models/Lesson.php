@@ -24,7 +24,7 @@ class Lesson extends Model
     }
 
     public function SelfTest(){
-        return $this->hasMany(SelfTest::class, 'SelfTestId');
+        return $this->hasMany(SelfTest::class, 'LessonId');
     }
 
     public function FlashCard(){

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Course;
 use Illuminate\Http\Request;
 
 use App\Models\Lesson;
 use App\Models\CourseSchedule;
-use Illuminate\Support\Facades\Validator; // Add this line
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\Holiday;
@@ -19,7 +20,6 @@ class HolidayController extends Controller
 {
     public function addHoliday(Request $request)
     {
-        // 1. Validate the input data
         $validator = Validator::make($request->all(), [
             'Name' => 'required|string|max:255',
             'Description' => 'required|string|max:1000',
@@ -36,7 +36,6 @@ class HolidayController extends Controller
         }
 
         DB::transaction(function () use ($request) {
-            // 2. Create the holiday
             $holiday = Holiday::create([
                 'Name' => $request['Name'],
                 'Description' => $request['Description'],
@@ -115,21 +114,6 @@ class HolidayController extends Controller
                     $newDate = $endHoliday->copy()->addDay();
 
                     foreach ($backupLessons as $backup) {
-                        /* while (
-                        in_array($newDate->toDateString(), $usedDates) ||
-                        $allHolidays->contains(fn($h) => $newDate->between($h->StartDate, $h->EndDate)) ||
-                        Lesson::whereHas('course.CourseSchedule', function ($q) use ($roomId) {
-                            $q->where('RoomId', $roomId);
-                        })
-                        ->where('Date', $newDate->toDateString())
-                        ->where('Start_Time', $backup->Start_Time)
-                        ->where('End_Time', $backup->End_Time)
-                        ->exists() ||
-                        !in_array($newDate->format('D'), $courseDays)
-                    ) {
-                        $newDate->addDay();
-                    }*/
-
                         while (
                             in_array($newDate->toDateString(), $usedDates) ||
                             $allHolidays->contains(fn($h) => $newDate->between($h->StartDate, $h->EndDate)) ||
@@ -145,7 +129,6 @@ class HolidayController extends Controller
                         ) {
                             $newDate->addDay();
                         }
-
 
                         $newLessons[] = [
                             'CourseId' => $backup->CourseId,
@@ -251,24 +234,19 @@ class HolidayController extends Controller
                         $durationDifference = $originalDuration - $achievedDuration;
 
                         // Notify secretaries
-                        $message = "تم تعديل فترة التسجيل للكورس '{$course->Name}' بسبب الإجازة ({$holiday->Name}). " .
-                            "الفترة الجديدة: من {$newStart->toDateString()} إلى {$newEnd->toDateString()}";
+                        $message = "The enrollment period for the course '{$course->Name}' has been adjusted due to the holiday ({$holiday->Name}). " .
+                                    "The new period: from {$newStart->toDateString()} to {$newEnd->toDateString()}";
 
                         if ($achievedDuration < $originalDuration) {
-                            $message .= " (ملاحظة: تم تقصير المدة بمقدار {$durationDifference} أيام بسبب تعارض العطل)";
+                            $message .= " (Note: The duration was shortened by {$durationDifference} days due to holiday conflicts)";
                         }
 
-                       // $this->assignTaskToSecretaries($message);
                     } else {
 
                         return response()->json([
                             'status' => 'Done',
-                            'message' => 'تحذير: لم يتم العثور على أيام تسجيل صالحة للكورس {$course->Name} بعد تطبيق العطلة ({$holiday->Name})',
-
+                            'message' => 'Warning: No valid enrollment days were found for the course {$course->Name} after applying the holiday ({$holiday->Name})',
                         ], 200);
-                       /// $this->assignTaskToSecretaries(
-                            //"تحذير: لم يتم العثور على أيام تسجيل صالحة للكورس '{$course->Name}' بعد تطبيق العطلة ({$holiday->Name})"
-                       // );
                     }
                 }
             }
@@ -278,5 +256,63 @@ class HolidayController extends Controller
             'status' => 'success',
             'message' => 'Holiday added successfully, enrollment and lessons adjusted.',
         ]);
+    }
+
+    public function getHoliday()
+    {
+        $holidays = Holiday::all();
+
+        $holidaysWithDetails = $holidays->map(function ($holiday) {
+            //Get lessons affected by this holiday from backups
+            $affectedLessons = DB::table('lesson_backups')
+                ->where('holiday_id', $holiday->id)
+                ->get(['CourseId', 'Title', 'Date']);
+
+            $groupedByCourse = $affectedLessons->groupBy('CourseId');
+
+            $affectedCourses = $groupedByCourse->map(function ($lessons, $courseId) {
+                $course = Course::find($courseId);
+
+                //Retrieve new lessons after modifying the schedule
+                $newLessons = Lesson::where('CourseId', $courseId)
+                    ->orderBy('Date')
+                    ->get(['Title', 'Date', 'Start_Time', 'End_Time']);
+
+                return [
+                    'CourseId' => $courseId,
+                    'CourseTitle' => $course?->Description ?? 'Unknown',
+                    'OldStartDate' => optional($lessons)->min('Date'),
+                    'OldEndDateBeforeHoliday' => optional($lessons)->max('Date'),
+                    'NewStartDate' => optional($newLessons)->min('Date'),
+                    'NewEndDate' => optional($newLessons)->max('Date'),
+                    'AffectedLessonTitles' => $lessons->pluck('Title')->unique()->values(),
+                    'AffectedLessonCount' => $lessons->count(),
+                    'NewSchedule' => $newLessons->map(function ($lesson) {
+                        return [
+                            'Title' => $lesson->Title,
+                            'Date' => $lesson->Date,
+                            'StartTime' => $lesson->Start_Time,
+                            'EndTime' => $lesson->End_Time,
+                        ];
+                    })->values(),
+                ];
+            })->values();
+
+            return [
+                'id' => $holiday->id,
+                'Name' => $holiday->Name,
+                'Description' => $holiday->Description,
+                'StartDate' => $holiday->StartDate,
+                'EndDate' => $holiday->EndDate,
+                'AffectedLessonsCount' => $affectedLessons->count(),
+                'AffectedCoursesCount' => $affectedCourses->count(),
+                'AffectedCourses' => $affectedCourses,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $holidaysWithDetails,
+        ], 200);
     }
 }

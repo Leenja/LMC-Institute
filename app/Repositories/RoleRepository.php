@@ -10,7 +10,7 @@ class RoleRepository
     public function findRoleById($id)
     {
         return Role::where('id', $id)
-                 ->where('guard_name', 'api')
+                 ->where('guard_name', 'sanctum')
                  ->first();
     }
 

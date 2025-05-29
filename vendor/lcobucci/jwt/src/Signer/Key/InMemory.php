@@ -3,48 +3,48 @@ declare(strict_types=1);
 
 namespace Lcobucci\JWT\Signer\Key;
 
-use Lcobucci\JWT\Encoding\CannotDecodeContent;
+use Lcobucci\JWT\Signer\InvalidKeyProvided;
 use Lcobucci\JWT\Signer\Key;
+use Lcobucci\JWT\SodiumBase64Polyfill;
 use SplFileObject;
 use Throwable;
 
 use function assert;
-use function base64_decode;
 use function is_string;
 
 final class InMemory implements Key
 {
-    private string $contents;
-    private string $passphrase;
-
-    private function __construct(string $contents, string $passphrase)
+    /** @param non-empty-string $contents */
+    private function __construct(public readonly string $contents, public readonly string $passphrase)
     {
-        $this->contents   = $contents;
-        $this->passphrase = $passphrase;
     }
 
-    public static function empty(): self
-    {
-        return new self('', '');
-    }
-
+    /** @param non-empty-string $contents */
     public static function plainText(string $contents, string $passphrase = ''): self
     {
+        self::guardAgainstEmptyKey($contents);
+
         return new self($contents, $passphrase);
     }
 
+    /** @param non-empty-string $contents */
     public static function base64Encoded(string $contents, string $passphrase = ''): self
     {
-        $decoded = base64_decode($contents, true);
+        $decoded = SodiumBase64Polyfill::base642bin(
+            $contents,
+            SodiumBase64Polyfill::SODIUM_BASE64_VARIANT_ORIGINAL,
+        );
 
-        if ($decoded === false) {
-            throw CannotDecodeContent::invalidBase64String();
-        }
+        self::guardAgainstEmptyKey($decoded);
 
         return new self($decoded, $passphrase);
     }
 
-    /** @throws FileCouldNotBeRead */
+    /**
+     * @param non-empty-string $path
+     *
+     * @throws FileCouldNotBeRead
+     */
     public static function file(string $path, string $passphrase = ''): self
     {
         try {
@@ -53,10 +53,21 @@ final class InMemory implements Key
             throw FileCouldNotBeRead::onPath($path, $exception);
         }
 
-        $contents = $file->fread($file->getSize());
+        $fileSize = $file->getSize();
+        $contents = $fileSize > 0 ? $file->fread($file->getSize()) : '';
         assert(is_string($contents));
 
+        self::guardAgainstEmptyKey($contents);
+
         return new self($contents, $passphrase);
+    }
+
+    /** @phpstan-assert non-empty-string $contents */
+    private static function guardAgainstEmptyKey(string $contents): void
+    {
+        if ($contents === '') {
+            throw InvalidKeyProvided::cannotBeEmpty();
+        }
     }
 
     public function contents(): string
