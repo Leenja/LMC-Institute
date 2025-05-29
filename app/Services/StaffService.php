@@ -588,27 +588,4 @@ class StaffService
 
         return true;
     }
-
-    public function editSelfTestQuestion(array $data)
-    {
-        $question = SelfTestQuestion::findOrFail($data['SelfTestQuestionId']);
-
-        $question->update([
-            'Media' => $data['Media'] ?? $question->Media,
-            'QuestionText' => $data['QuestionText'],
-            'Type' => $data['Type'],
-            'Choices' => $data['Choices'] ?? null,
-            'CorrectAnswer' => $data['CorrectAnswer'] ?? null,
-        ]);
-
-        return $question;
-    }
-
-    public function deleteSelfTestQuestion($id)
-    {
-        $question = SelfTestQuestion::findOrFail($id);
-        $question->delete();
-
-        return true;
-    }
 }
