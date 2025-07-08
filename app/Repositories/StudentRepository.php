@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Notes;
 use App\Models\PlacementTest;
+use App\Models\SelfTest;
 use App\Models\SelfTestQuestion;
 use App\Models\StudentProgress;
 use Carbon\Carbon;
@@ -76,25 +77,45 @@ class StudentRepository
     }
 
     //Take self test
-    public function getNextSelfTestQuestion($selfTestId , $questionId)
+    public function getNextSelfTestQuestion($selfTestId, $questionId)
     {
         return SelfTestQuestion::where('SelfTestId', $selfTestId)
-                ->where('id',$questionId)
-                ->select('id', 'Type', 'Media', 'QuestionText', 'Choices')->first();
+            ->where('id', $questionId)
+            ->select('id', 'Type', 'Media', 'QuestionText', 'Choices')->first();
     }
 
+    public function findWithLessonAndCourse($selfTestId)
+    {
+        return SelfTest::with('Lesson.Course')->find($selfTestId);
+    }
+
+    public function getQuestionsBySelfTestId($selfTestId)
+    {
+        return SelfTestQuestion::where('SelfTestId', $selfTestId)->get();
+    }
+
+    public function getByLessonWithQuestions($lessonId)
+    {
+        return SelfTest::with('Questions')->where('LessonId', $lessonId)->get();
+    }
+
+
+
     //Note
-    public function createNote($data) {
+    public function createNote($data)
+    {
         return Notes::create($data);
     }
 
-    public function updateNote($note, $content) {
+    public function updateNote($note, $content)
+    {
         $note->Content = $content;
         $note->save();
         return $note;
     }
 
-    public function deleteNote($note) {
+    public function deleteNote($note)
+    {
         $note->delete();
         return true;
     }
@@ -141,5 +162,4 @@ class StudentRepository
 
         return 0;
     }
-
 }

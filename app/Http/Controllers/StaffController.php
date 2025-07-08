@@ -16,6 +16,12 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\URL;
 
+use App\Services\RoleService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
+use Spatie\Permission\Models\Role;
+
 class StaffController extends Controller
 {
     protected $staffService;
@@ -25,7 +31,103 @@ class StaffController extends Controller
         $this->staffService = $staffService;
     }
 
-    public function editMyInfo(Request $request) {
+    //lana
+    public function getTeachers()
+    {
+        $teachers = User::role('Teacher')->with(['roles', 'staffInfo'])->get();
+
+        if ($teachers->isEmpty()) {
+            return response()->json([
+                'message' => 'No teachers found.',
+                'data'    => [],
+            ], 200);
+        }
+
+        $data = $teachers->map(function ($teacher) {
+            return [
+                'id'          => $teacher->id,
+                'name'        => $teacher->name,
+                'email'       => $teacher->email,
+                'roles'       => $teacher->roles->pluck('name'),
+                'photo'       => $teacher->staffInfo?->Photo,
+                'description' => $teacher->staffInfo?->Description,
+            ];
+        });
+
+        return response()->json([
+            'data' => $data,
+        ], 200);
+    }
+
+    //1
+
+    public function getGuestStudent(Request $request)
+    {
+        $type = strtolower($request->query('type'));
+
+        if ($type === 'student') {
+            $students = User::role('Student')->get();
+
+            $studentData = $students->map(function ($user) {
+                return [
+                    'id'    => $user->id,
+                    'name'  => $user->name,
+                    'email' => $user->email,
+                    'roles' => $user->roles->pluck('name'),
+                ];
+            });
+
+            return response()->json([
+                'students' => $studentData,
+            ], 200);
+        }
+
+        if ($type === 'guest') {
+            $guests = User::role('Guest')->get();
+
+            $guestData = $guests->map(function ($user) {
+                return [
+                    'id'    => $user->id,
+                    'name'  => $user->name,
+                    'email' => $user->email,
+                    'roles' => $user->roles->pluck('name'),
+                ];
+            });
+
+            return response()->json([
+                'guests' => $guestData,
+            ], 200);
+        }
+
+        $students = User::role('Student')->get();
+        $guests = User::role('Guest')->get();
+
+        $studentData = $students->map(function ($user) {
+            return [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles->pluck('name'),
+            ];
+        });
+
+        $guestData = $guests->map(function ($user) {
+            return [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles->pluck('name'),
+            ];
+        });
+
+        return response()->json([
+            'students' => $studentData,
+            'guests'   => $guestData,
+        ], 200);
+    }
+
+    public function editMyInfo(Request $request)
+    {
         $user = auth()->id();
 
         $validated = $request->validate([
@@ -55,7 +157,8 @@ class StaffController extends Controller
         ]);
     }
 
-    public function removeMyInfo(Request $request) {
+    public function removeMyInfo(Request $request)
+    {
         $userId = auth()->id();
 
         $staffInfo = StaffInfo::where('UserId', $userId)->first();
@@ -93,8 +196,127 @@ class StaffController extends Controller
         ]);
     }
 
+    public function getRoles(): JsonResponse
+    {
+        $roles = $this->staffService->getAllRoles();
+
+        return response()->json([
+            'roles' => $roles
+        ]);
+    }
+
+    public function getUsersByRoleId($roleId): JsonResponse
+    {
+        try {
+            $result = $this->staffService->getUsersByRoleId($roleId);
+
+            $usersWithRole = $result['users']->map(function ($user) use ($result) {
+                $user->role = [
+                    'id' => $result['role']->id,
+                    'name' => $result['role']->name,
+                ];
+                unset($user->pivot);
+                return $user;
+            });
+
+            return response()->json([
+                'users' => $usersWithRole,
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Role not found'
+            ], 404);
+        }
+    }
+
+    public function destroyEmployee($id)
+    {
+        try {
+            $result = $this->staffService->deleteEmployee($id);
+
+            return response()->json([
+                'message' => $result['message'],
+                'deleted_at' => $result['deleted_at'] ?? null
+            ], $result['status']);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], (is_numeric($e->getCode()) && $e->getCode() >= 100 && $e->getCode() < 600) ? $e->getCode() : 500);
+        }
+    }
+
+    /* public function showAllEmployees()
+    {
+        // نحدد الـ IDs الخاصة بالأدوار المطلوبة (مثلاً: Teacher=2, Secretarya=3, Logistic=4)
+        // يجب استبدال هذه القيم بالأرقام الحقيقية الموجودة في جدول roles
+        $roleIds = Role::whereIn('name', ['Teacher', 'Secretarya', 'Logistic'])->pluck('id')->toArray();
+
+        $employees = User::withTrashed()
+            ->whereIn('role_id', $roleIds)
+            ->with([
+                'staffInfo' => function ($query) {
+                    $query->withTrashed();
+                }
+            ])
+            ->get();
+
+        return response()->json([
+            'employees' => $employees
+        ]);
+    }*/
+
+    public function showAllEmployees(Request $request): JsonResponse
+    {
+        $filter = $request->query('filter', 'active');
+
+        $allowedFilters = ['all', 'only_deleted', 'active'];
+
+        if (!in_array($filter, $allowedFilters)) {
+            $filter = 'active';
+        }
+
+        $employees = $this->staffService->getAllEmployees($filter);
+
+        return response()->json([
+            'employees' => $employees
+        ]);
+    }
+
+    public function showEmployee(Request $request, int $id): JsonResponse
+    {
+        $withTrashed = $request->query('with_trashed', false);
+
+        $employee = $this->staffService->getEmployeeById($id, $withTrashed);
+
+        if (!$employee) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        return response()->json([
+            'employee' => $employee,
+            'deleted_at' => $employee->deleted_at
+        ]);
+    }
+
+    public function restoreEmployee($id): JsonResponse
+    {
+        try {
+            $this->staffService->restoreEmployee($id);
+
+            return response()->json([
+                'message' => 'User restored successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], is_numeric($e->getCode()) && $e->getCode() >= 100 && $e->getCode() < 600 ? $e->getCode() : 500);
+        }
+    }
+
+
     //Secretary--------------------------------------------------
-    public function enrollStudent (Request $request) {
+    public function enrollStudent(Request $request)
+    {
         $data = $request->validate([
             'StudentId' => 'required|exists:users,id',
             'CourseId' => 'required|exists:courses,id',
@@ -144,7 +366,8 @@ class StaffController extends Controller
         );
     }
 
-    public function viewEnrolledStudentsInCourse($courseId) {
+    public function viewEnrolledStudentsInCourse($courseId)
+    {
         return response()->json(
             $this->staffService->viewEnrolledStudentsInCourse($courseId)
         );
@@ -154,7 +377,7 @@ class StaffController extends Controller
     {
         return Enrollment::all()
             ->map(function ($enrollment) {
-                $student = User::find($enrollment->StudentId);  // Fetch user details using StudentId
+                $student = User::find($enrollment->StudentId);
                 return [
                     'EnrollmentId' => $enrollment->id,
                     'Student' => $student ? [
@@ -166,7 +389,8 @@ class StaffController extends Controller
             });
     }
 
-    public function addCourse(Request $request) {
+    public function addCourse(Request $request)
+    {
 
         if ($request->has('CourseDays') && is_string($request->input('CourseDays'))) {
             $request->merge([
@@ -219,7 +443,8 @@ class StaffController extends Controller
         );
     }
 
-    public function editCourse(Request $request) {
+    public function editCourse(Request $request)
+    {
 
         if ($request->has('CourseDays') && is_string($request->input('CourseDays'))) {
             $request->merge([
@@ -229,7 +454,8 @@ class StaffController extends Controller
 
         $data = $request->validate([
             'CourseId' => 'required|exists:courses,id',
-            'RoomId' => 'required|exists:rooms,id',
+            //'RoomId' => 'required|exists:rooms,id',
+            'RoomId' => 'nullable|exists:rooms,id',
             'Photo' => 'nullable|file|image|mimes:jpeg,png,jpg,gif|max:2048',
             'Start_Enroll' => 'required|date|after_or_equal:now()|before_or_equal:End_Enroll',
             'End_Enroll' => 'required|date|after_or_equal:now()|after_or_equal:Start_Enroll',
@@ -333,28 +559,55 @@ class StaffController extends Controller
     }
 
     //Teacher---------------------------------------------------
-    public function sendAssignments() {
+    public function sendAssignments() {}
 
-    }
-
-    public function reviewMyCourses() {
+    public function reviewMyCourses()
+    {
         $teacherId = auth()->user()->id;
 
-        $courses = Course::where('TeacherId', $teacherId)->with('CourseSchedule.Room', 'Language','User')->get();
+        $courses = Course::where('TeacherId', $teacherId)
+            ->with(['CourseSchedule.Room', 'Language', 'User'])
+            ->get()
+            ->map(function ($course) {
+                $schedule = $course->CourseSchedule->first();
+
+                return [
+                    'id' => $course->id,
+                    'TeacherName' => $course->User->name ?? null,
+                    'LanguageName' => $course->Language->Name ?? null,
+                    'Description' => $course->Description,
+                    'Level' => $course->Level,
+                    'Status' => $course->Status,
+                    'Photo' => $course->Photo,
+                    'course_schedule' => $schedule ? [
+                        'id' => $schedule->id,
+                        'Start_Date' => $schedule->Start_Date,
+                        'End_Date' => $schedule->End_Date,
+                        'Days' => $schedule->CourseDays,
+                        'Start_Time' => $schedule->Start_Time,
+                        'End_Time' => $schedule->End_Time,
+                        'NumberOfRoom' => $schedule->Room->NumberOfRoom ?? null,
+                    ] : null,
+                ];
+            });
 
         return response()->json([
             'My Courses' => $courses
         ]);
     }
 
-    public function reviewSchedule() {
+    public function reviewSchedule(Request $request)
+    {
+        $date = $request->input('date');
 
-        $result = $this->staffService->getTodaysSchedule();
+        $result = $this->staffService->getScheduleByDate($date);
 
         return response()->json($result);
     }
 
-    public function reviewStudentsNames($courseId) {
+
+    public function reviewStudentsNames($courseId)
+    {
         $teacherId = auth()->user()->id;
 
         $course = Course::where('id', $courseId)->where('TeacherId', $teacherId)->first();
@@ -365,12 +618,18 @@ class StaffController extends Controller
 
         $enrollments = $course->Enrollment()->with('User')->get();
 
-        $studentNames = $enrollments->map(function ($enrollment) {
-            return $enrollment->User->name ?? null;
+        $students = $enrollments->map(function ($enrollment) {
+            if ($enrollment->User) {
+                return [
+                    'id' => $enrollment->User->id,
+                    'name' => $enrollment->User->name,
+                ];
+            }
+            return null;
         })->filter();
 
         return response()->json([
-            'Students' => $studentNames->values()
+            'students' => $students->values()
         ]);
     }
 
@@ -414,7 +673,8 @@ class StaffController extends Controller
         return response()->json(['message' => $result['success']]);
     }
 
-    public function addSelfTest(Request $request) {
+    public function addSelfTest(Request $request)
+    {
         $data = $request->validate([
             'LessonId' => 'required|exists:lessons,id',
             'Title' => 'required|string',
@@ -571,7 +831,8 @@ class StaffController extends Controller
         }
     }
 
-    public function addFlashCard(Request $request) {
+    public function addFlashCard(Request $request)
+    {
         $data = $request->validate([
             'LessonId' => 'required|exists:lessons,id',
             'Content' => 'required|string',
@@ -586,7 +847,8 @@ class StaffController extends Controller
         ]);
     }
 
-    public function editFlashCard(Request $request) {
+    public function editFlashCard(Request $request)
+    {
         $data = $request->validate([
             'FlashcardId' => 'required|exists:flash_cards,id',
             'Content' => 'required|string',
@@ -601,7 +863,8 @@ class StaffController extends Controller
         ]);
     }
 
-    public function deleteFlashCard(Request $request) {
+    public function deleteFlashCard(Request $request)
+    {
         $data = $request->validate([
             'FlashcardId' => 'required|exists:flash_cards,id',
         ]);
@@ -613,7 +876,8 @@ class StaffController extends Controller
         ]);
     }
 
-    public function viewAllTeacherFlashCards() {
+    public function viewAllTeacherFlashCards()
+    {
         $teacherId = auth()->user()->id;
         $flashCards = $this->staffService->getAllFlashCards($teacherId);
 
@@ -623,7 +887,8 @@ class StaffController extends Controller
         ]);
     }
 
-    public function viewTeacherFlashCard($flashcardId) {
+    public function viewTeacherFlashCard($flashcardId)
+    {
         $teacherId = auth()->user()->id;
         $flashCard = $this->staffService->getFlashCard($teacherId, $flashcardId);
 
@@ -674,5 +939,4 @@ class StaffController extends Controller
             'FlashCards' => $flashCards
         ]);
     }
-
 }

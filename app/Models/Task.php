@@ -17,6 +17,7 @@ class Task extends Model
         'RequiresInvoice',
         'Completed_at'
     ];
+    
 
     public function UserTask(){
         return $this->hasMany(UserTask::class, 'UserTaskId');
@@ -40,6 +41,20 @@ class Task extends Model
      }
 
     public function Invoice(){
-        return $this->hasMany(Invoice::class, 'InvoiceId');
+        return $this->hasMany(Invoice::class, 'TaskId');
     }
+
+    public function assignedUsers()
+ {
+        return $this->belongsToMany(User::class, 'usertasks', 'TaskId', 'UserId')
+            ->withPivot('RequiresInvoice', 'Completed')
+            ->withTimestamps();
+}
+public function updateRequiresInvoice(int $taskId, int $userId, bool $requiresInvoice): bool
+{
+    $task = Task::findOrFail($taskId);
+
+    // update pivot RequiresInvoice value for this user
+    return $task->assignedUsers()->updateExistingPivot($userId, ['RequiresInvoice' => $requiresInvoice]);
+}
 }

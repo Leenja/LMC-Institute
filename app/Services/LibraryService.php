@@ -6,6 +6,8 @@ use App\Models\Item;
 use App\Models\Library;
 use App\Repositories\LibraryRepository;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Exception;
 
 class LibraryService
 {
@@ -50,21 +52,57 @@ class LibraryService
         ];
     }
 
+
+
     public function uploadFile($data, $file)
     {
-        $path = $file->store('library_files/' . $data['LibraryId'], 'public');
+        DB::beginTransaction();
 
-        $item = $this->repository->createItem([
-            'LibraryId' => $data['LibraryId'],
-            'File' => $path,
-            'Description' => $data['Description'],
-        ]);
+        try {
+            if (!$file) {
+                throw new Exception('File is required', 400);
+            }
 
-        return [
-            'item' => $item,
-            'file_url' => asset('storage/' . $path)
-        ];
+            $newName = time() . '_' . $file->getClientOriginalName();
+            $destinationPath = public_path('storage/library_files/' . $data['LibraryId']);
+
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+
+            $file->move($destinationPath, $newName);
+
+            $relativePath = 'storage/library_files/' . $data['LibraryId'] . '/' . $newName;
+            $fullPath = public_path($relativePath);
+
+            if (!file_exists($fullPath)) {
+                throw new Exception('Failed to upload file', 500);
+            }
+
+            $item = $this->repository->createItem([
+                'LibraryId' => $data['LibraryId'],
+                'File' => 'library_files/' . $data['LibraryId'] . '/' . $newName, // store relative path
+                'Description' => $data['Description'],
+            ]);
+
+            DB::commit();
+
+            return [
+                'item' => $item,
+                'file_url' => url($relativePath)
+            ];
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            // حذف الملف إذا تم رفعه ثم حدث خطأ
+            if (isset($fullPath) && file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+
+            throw $e;
+        }
     }
+
 
     public function addLanguageToLibrary($languageId)
     {
@@ -85,64 +123,140 @@ class LibraryService
             return 'not_found';
         }
 
-        // Get all related items
+        // جلب كل العناصر المرتبطة بالمكتبة
         $items = Item::where('LibraryId', $library->id)->get();
 
+        // مسار المجلد الذي يحتوي ملفات المكتبة
+        $folderPath = public_path("storage/library_files/{$library->id}");
+
         if ($items->isEmpty()) {
-            $folderPath = "library_files/{$library->id}";
-            if (Storage::disk('public')->exists($folderPath)) {
-                Storage::disk('public')->deleteDirectory($folderPath);
+            // حذف مجلد الملفات إذا وجد
+            if (file_exists($folderPath)) {
+                $this->deleteDirectoryRecursively($folderPath);
             }
 
             $library->delete();
             return 'no_items';
         }
 
-        // حذف كل العناصر والملفات المرتبطة
+        // حذف كل الملفات الخاصة بالعناصر أولاً
         foreach ($items as $item) {
-            if ($item->file_path && Storage::disk('public')->exists($item->file_path)) {
-                Storage::disk('public')->delete($item->file_path);
+            if ($item->File) {
+                $fileFullPath = public_path('storage/' . $item->File);
+                if (file_exists($fileFullPath)) {
+                    unlink($fileFullPath);
+                }
             }
             $item->delete();
         }
 
-        $folderPath = "library_files/{$library->id}";
-        if (Storage::disk('public')->exists($folderPath)) {
-            Storage::disk('public')->deleteDirectory($folderPath);
+        // حذف مجلد الملفات الخاص بالمكتبة إن وجد
+        if (file_exists($folderPath)) {
+            $this->deleteDirectoryRecursively($folderPath);
         }
 
         $library->delete();
+
         return 'deleted';
     }
 
+    /**
+     * دالة مساعدة لحذف مجلد وكل محتوياته بشكل متكرر (Recursively)
+     */
+    private function deleteDirectoryRecursively($dir)
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+
+        $files = array_diff(scandir($dir), ['.', '..']);
+
+        foreach ($files as $file) {
+            $path = $dir . DIRECTORY_SEPARATOR . $file;
+            if (is_dir($path)) {
+                $this->deleteDirectoryRecursively($path);
+            } else {
+                unlink($path);
+            }
+        }
+
+        rmdir($dir);
+    }
+
+
+
     public function editFile($id, $data, $file = null)
     {
-        $item = $this->repository->findItemById($id);
+        DB::beginTransaction();
 
-        if (!$item) {
-            throw new \Exception('File not found', 404);
-        }
+        try {
+            $item = $this->repository->findItemById($id);
 
-        if ($file) {
-            if (Storage::disk('public')->exists($item->File)) {
-                Storage::disk('public')->delete($item->File);
+            if (!$item) {
+                throw new Exception('File not found', 404);
             }
 
-            $path = $file->store('library_files/' . $item->LibraryId, 'public');
-            $item->File = $path;
+            $hasNewDescription = isset($data['Description']) && $data['Description'] !== $item->Description;
+            $hasNewFile = $file !== null;
+
+            if (!$hasNewDescription && !$hasNewFile) {
+                throw new Exception('No data provided to update.', 422);
+            }
+
+            $newRelativePath = null;
+            $fullPath = null;
+
+            if ($hasNewFile) {
+                // حذف الملف القديم إن وجد
+                $oldFilePath = public_path('storage/' . $item->File);
+                if (file_exists($oldFilePath)) {
+                    unlink($oldFilePath);
+                }
+
+                // رفع الملف الجديد
+                $newName = time() . '_' . $file->getClientOriginalName();
+                $destinationPath = public_path('storage/library_files/' . $item->LibraryId);
+
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+
+                $file->move($destinationPath, $newName);
+
+                $newRelativePath = 'library_files/' . $item->LibraryId . '/' . $newName;
+                $fullPath = public_path('storage/' . $newRelativePath);
+
+                if (!file_exists($fullPath)) {
+                    throw new Exception('Failed to upload new file', 500);
+                }
+
+                $item->File = $newRelativePath;
+            }
+
+            if ($hasNewDescription) {
+                $item->Description = $data['Description'];
+            }
+
+            $item->save();
+
+            DB::commit();
+
+            return [
+                'item' => $item,
+                'file_url' => url('storage/' . $item->File)
+            ];
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            // حذف الملف الجديد إذا تم رفعه ثم حدث خطأ
+            if (isset($fullPath) && file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+
+            throw $e;
         }
-
-        if (isset($data['Description'])) {
-            $item->Description = $data['Description'];
-        }
-
-        $item->save();
-
-        return [
-            'item' => $item,
-            'file_url' => asset('storage/' . $item->File)
-        ];
     }
+
 
     public function deleteFile($id)
     {
@@ -152,12 +266,17 @@ class LibraryService
             throw new \Exception('File not found', 404);
         }
 
-        if ($item->File && Storage::disk('public')->exists($item->File)) {
-            Storage::disk('public')->delete($item->File);
+        // حدد المسار الكامل إلى الملف في مجلد public
+        $fullPath = public_path('storage/' . $item->File);
+
+        if (file_exists($fullPath)) {
+            unlink($fullPath); // حذف الملف فعليًا
         }
 
+        // حذف السجل من قاعدة البيانات
         $this->repository->deleteItem($item);
     }
+
 
     public function downloadFile($id)
     {
@@ -167,15 +286,17 @@ class LibraryService
             return response()->json(['message' => 'Item not found'], 404);
         }
 
-        $filePath = storage_path('app/public/' . $item->File);
+        // الملف محفوظ داخل public/storage/library_files/... كما هو واضح في uploadFile
+        $relativePath = 'storage/' . $item->File; // نضيف "storage/" لأنها داخل مجلد public
+        $fullPath = public_path($relativePath);
 
-        if (!file_exists($filePath)) {
-            return response()->json(['message' => 'File not found'], 404);
+        if (!file_exists($fullPath)) {
+            return response()->json(['message' => 'File not found on server'], 404);
         }
 
-        return response()->download($filePath, basename($filePath), [
-            'Content-Type' => mime_content_type($filePath),
-            'Content-Disposition' => 'attachment; filename="' . basename($filePath) . '"',
+        return response()->download($fullPath, basename($fullPath), [
+            'Content-Type' => mime_content_type($fullPath),
+            'Content-Disposition' => 'attachment; filename="' . basename($fullPath) . '"',
         ]);
     }
 }

@@ -203,7 +203,7 @@ class ComplaintService
         return [
             'status' => 'empty',
             'message' => "No {$status} complaints exist.",
-            'status_code' => 404
+           // 'status_code' => 404
         ];
      }
 

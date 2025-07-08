@@ -4,11 +4,14 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\ComplaintController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\FirebaseTokenController;
 use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\IndividualCourseRequestController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\ManagerController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SendNotificationController;
 use App\Http\Controllers\StaffController;
@@ -48,6 +51,10 @@ Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->g
 
     Route::post('assignTask', [TaskController::class, 'assignTask']);
 
+    Route::post('updateTask/{id}', [TaskController::class, 'updateTask']);
+
+    Route::delete('deleteTask/{id}', [TaskController::class, 'deleteTask']);
+
     Route::get('showTasks', [TaskController::class, 'showTasks']);
 
     Route::post('addRoom', [RoomController::class, 'addRoom']);
@@ -61,6 +68,25 @@ Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->g
     Route::delete('deleteLanguage/{id}', [LanguageController::class, 'deleteLanguage']);
 
     Route::post('editLMCInfo', [ManagerController::class, 'editLMCInfo']);
+
+    Route::get('getRoles', [StaffController::class, 'getRoles']);
+
+    Route::get('getUsersByRoleId/{roleId}', [StaffController::class, 'getUsersByRoleId']);
+
+    Route::delete('destroyEmployee/{id}', [StaffController::class, 'destroyEmployee']);
+
+    Route::get('showAllEmployees', [StaffController::class, 'showAllEmployees']);
+
+    Route::get('showEmployee/{id}', [StaffController::class, 'showEmployee']);
+
+    Route::post('restoreEmployee/{id}', [StaffController::class, 'restoreEmployee']);
+
+    Route::post('addPage', [PageController::class, 'addPage']);
+
+    Route::post('updatePage/{id}', [PageController::class, 'updatePage']);
+
+    Route::delete('destroyPage/{id}', [PageController::class, 'destroyPage']);
+
 });
 
 
@@ -71,9 +97,9 @@ Route::middleware(['auth:sanctum', 'role:Teacher|SuperAdmin'])->prefix('teacher'
 
     Route::post('deleteFlashcard', [StaffController::class, 'deleteFlashCard']);
 
-    Route::get("viewAllTeacherFlashCards", [StaffController::class,"viewAllTeacherFlashCards"]);
+    Route::get("viewAllTeacherFlashCards", [StaffController::class, "viewAllTeacherFlashCards"]);
 
-    Route::get("viewTeacherFlashCard/{flashcardId}", [StaffController::class,"viewTeacherFlashCard"]);
+    Route::get("viewTeacherFlashCard/{flashcardId}", [StaffController::class, "viewTeacherFlashCard"]);
 
     Route::get('viewLessonFlashCards/{lessonId}', [StaffController::class, 'viewLessonFlashCards']);
 
@@ -123,9 +149,9 @@ Route::middleware(['auth:sanctum', 'role:Secretarya|SuperAdmin'])->prefix('secre
 
     Route::post("addCourse", [StaffController::class, "addCourse"]);
 
-    Route::post("editCourse", [StaffController::class,"editCourse"]);
+    Route::post("editCourse", [StaffController::class, "editCourse"]);
 
-    Route::delete("deleteCourse/{course}", [StaffController::class,"deleteCourse"]);
+    Route::delete("deleteCourse/{course}", [StaffController::class, "deleteCourse"]);
 
     Route::get('showRooms', [RoomController::class, 'showRooms']);
 
@@ -133,9 +159,9 @@ Route::middleware(['auth:sanctum', 'role:Secretarya|SuperAdmin'])->prefix('secre
 
     Route::get('viewReservedRooms', [RoomController::class, 'viewReservedRooms']);
 
-    Route::get("viewEnrolledStudentsInCourse/{course}", [StaffController::class,"viewEnrolledStudentsInCourse"]);
+    Route::get("viewEnrolledStudentsInCourse/{course}", [StaffController::class, "viewEnrolledStudentsInCourse"]);
 
-    Route::get("getAllEnrolledStudents", [StaffController::class,"getAllEnrolledStudents"]);
+    Route::get("getAllEnrolledStudents", [StaffController::class, "getAllEnrolledStudents"]);
 
     Route::get('showInvoice/{id}', [InvoiceController::class, 'showInvoice']);
 
@@ -155,65 +181,94 @@ Route::middleware(['auth:sanctum', 'role:Secretarya|SuperAdmin'])->prefix('secre
 
     Route::delete('deleteLibraryForLanguage/{id}', [LibraryController::class, 'deleteLibraryForLanguage']);
 
+    Route::post('respondToRequestIndividualCourse/{id}', [IndividualCourseRequestController::class, 'respondToRequestIndividualCourse']);
+
+    Route::get('showAllIndividualRequest', [IndividualCourseRequestController::class, 'showAllIndividualRequest']);
+
+    Route::get("getTeachers", [StaffController::class, "getTeachers"]);
+
+    Route::get("showAllInvoices", [InvoiceController::class, "showAllInvoices"]);
+
+    Route::get("getGuestStudent", [StaffController::class, "getGuestStudent"]);
+
+    Route::post('try-send-notification', [FirebaseTokenController::class, 'sendTestNotification']);
+
 });
 
-Route::middleware(['auth:sanctum' , 'role:Logistic|SuperAdmin'])->prefix('logistic')->group(function() {
+Route::middleware(['auth:sanctum', 'role:Logistic|SuperAdmin'])->prefix('logistic')->group(function () {
 
     Route::post('createInvoice', [InvoiceController::class, 'createInvoice']);
-
 });
 
-Route::middleware(['auth:sanctum' , 'role:Student|SuperAdmin'])->prefix('student')->group(function() {
-    Route::get("viewEnrolledCourses", [StudentController::class,"viewEnrolledCourses"]);
+Route::middleware(['auth:sanctum', 'role:Student|SuperAdmin'])->prefix('student')->group(function () {
+    Route::get("viewEnrolledCourses", [StudentController::class, "viewEnrolledCourses"]);
 
-    Route::get("viewMyLessons/{course}", [StudentController::class,"viewMyLessons"]);
+    Route::get("viewMyLessons/{course}", [StudentController::class, "viewMyLessons"]);
 
-    Route::get("viewRoadmap", [StudentController::class,"viewRoadmap"]);
+    Route::get("viewRoadmap", [StudentController::class, "viewRoadmap"]);
 
-    Route::get("viewTeachers", [StudentController::class,"viewTeachers"]);
+    Route::get("viewTeachers", [StudentController::class, "viewTeachers"]);
 
-    Route::get("viewAvailableCourses", [StudentController::class,"viewAvailableCourses"]);
+    Route::get("viewAvailableCourses", [StudentController::class, "viewAvailableCourses"]);
 
-    Route::get("viewTeacher/{teacherId}", [StudentController::class,"viewTeacher"]);
+    Route::get("viewTeacher/{teacherId}", [StudentController::class, "viewTeacher"]);
 
-    Route::get("getSelfTestQuestions/{selfTestId}", [StudentController::class,"getSelfTestQuestions"]);
+    Route::get("getSelfTestQuestions/{selfTestId}", [StudentController::class, "getSelfTestQuestions"]);
 
-    Route::post("submitSelfTestAnswer", [StudentController::class,"submitSelfTestAnswer"]);
+    Route::post("submitSelfTestAnswer", [StudentController::class, "submitSelfTestAnswer"]);
 
-    Route::get("viewAllFlashCards", [StudentController::class,"viewAllFlashCards"]);
+    Route::get("viewAllFlashCards", [StudentController::class, "viewAllFlashCards"]);
 
-    Route::get("viewFlashCard/{flashcardId}", [StudentController::class,"viewFlashCard"]);
+    Route::get("viewFlashCard/{flashcardId}", [StudentController::class, "viewFlashCard"]);
 
     Route::get('viewFlashCardsByLesson/{lessonId}', [StudentController::class, 'viewFlashCardsByLesson']);
 
     Route::get('viewFlashCardsByCourse/{courseId}', [StudentController::class, 'viewFlashCardsByCourse']);
 
-    Route::post("addNote", [StudentController::class,"addNote"]);
+    Route::post("addNote", [StudentController::class, "addNote"]);
 
-    Route::post("editNote/{noteId}", [StudentController::class,"editNote"]);
+    Route::post("editNote/{noteId}", [StudentController::class, "editNote"]);
 
-    Route::get("deleteNote/{noteId}", [StudentController::class,"deleteNote"]);
+    Route::get("deleteNote/{noteId}", [StudentController::class, "deleteNote"]);
 
-    Route::get("viewMyNotes", [StudentController::class,"viewMyNotes"]);
+    Route::get("viewMyNotes", [StudentController::class, "viewMyNotes"]);
 
-    Route::get("viewProgress", [StudentController::class,"viewProgress"]);
+    Route::get("viewProgress", [StudentController::class, "viewProgress"]);
 });
 
-Route::middleware(['auth:sanctum' , 'role:Guest'])->prefix('guest')->group(function() {
-    Route::get("viewAvailableCourses", [StudentController::class,"viewAvailableCourses"]);
+Route::middleware(['auth:sanctum', 'role:Guest'])->prefix('guest')->group(function () {
+    Route::get("viewAvailableCourses", [StudentController::class, "viewAvailableCourses"]);
 
-    Route::get("viewTeachers", [StudentController::class,"viewTeachers"]);
+    Route::get("viewTeachers", [StudentController::class, "viewTeachers"]);
 
-    Route::get("viewTeacher/{teacherId}", [StudentController::class,"viewTeacher"]);
+    Route::get("viewTeacher/{teacherId}", [StudentController::class, "viewTeacher"]);
 
-    Route::get("viewRoadmap", [StudentController::class,"viewRoadmap"]);
+    Route::get("viewRoadmap", [StudentController::class, "viewRoadmap"]);
+});
+
+Route::middleware(['auth:sanctum', 'role:Guest|Student'])->prefix('guest-student')->group(function () {
+
+    Route::post('requestCourse/{languageId}', [IndividualCourseRequestController::class, 'requestCourse']);
+
+    Route::get('myRequestsForIndividualCourse', [IndividualCourseRequestController::class, 'myRequestsForIndividualCourse']);
+
+    Route::delete('deleteIndividualRequest/{id}', [IndividualCourseRequestController::class, 'deleteIndividualRequest']);
+
+    Route::post('updateIndividualRequest/{id}', [IndividualCourseRequestController::class, 'updateIndividualRequest']);
+});
+
+Route::middleware(['auth:sanctum', 'role:Teacher|Student'])->prefix('teacher-student')->group(function () {
+
+    Route::get("getSelfTest_ALL_Questions/{selfTestId}", [StudentController::class, "getSelfTest_ALL_Questions"]);
+
+    Route::get('getSelfTestsByLesson/{lessonId}', [StudentController::class, 'getSelfTestsByLesson']);
 });
 
 //all staff
-Route::middleware(['auth:sanctum' , 'role:Logistic|SuperAdmin|Teacher|Secretarya'])->prefix('staff')->group(function() {
-    Route::post("editMyInfo", [StaffController::class,"editMyInfo"]);
+Route::middleware(['auth:sanctum', 'role:Logistic|SuperAdmin|Teacher|Secretarya'])->prefix('staff')->group(function () {
+    Route::post("editMyInfo", [StaffController::class, "editMyInfo"]);
 
-    Route::post("removeMyInfo", [StaffController::class,"removeMyInfo"]);
+    Route::post("removeMyInfo", [StaffController::class, "removeMyInfo"]);
 
     Route::post('completeUserTask/{id}', [TaskController::class, 'completeUserTask']);
 
@@ -223,11 +278,11 @@ Route::middleware(['auth:sanctum' , 'role:Logistic|SuperAdmin|Teacher|Secretarya
 //all users
 Route::get('viewLMCInfo', [StudentController::class, 'viewLMCInfo']);
 
-Route::get("viewCourses", [StaffController::class,"viewCourses"]);
+Route::get("viewCourses", [StaffController::class, "viewCourses"]);
 
-Route::get("viewCourse/{courseId}", [StaffController::class,"viewCourse"]);
+Route::get("viewCourse/{courseId}", [StaffController::class, "viewCourse"]);
 
-Route::get("viewCourseDetails/{courseId}", [StaffController::class,"viewCourseDetails"]);
+Route::get("viewCourseDetails/{courseId}", [StaffController::class, "viewCourseDetails"]);
 
 Route::get('showLanguage/{id}', [LanguageController::class, 'showLanguage']);
 
@@ -247,6 +302,12 @@ Route::post('sendNotification', [SendNotificationController::class, 'sendNotific
 
 Route::get('getHoliday', [HolidayController::class, 'getHoliday']);
 
+Route::get('showAllPage', [PageController::class, 'showAllPage']);
+
+Route::get('showPage/{id}', [PageController::class, 'showPage']);
+
+Route::get('getLibraryByLanguage/{languageId}', [LibraryController::class, 'getLibraryByLanguage']);
+
 
 // Authenticated routes (all logged-in users)
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -255,4 +316,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('getCourseLessons/{courseId}', [StaffController::class, 'getCourseLessons']);
 
     Route::post('logout', [AuthController::class, 'logout']);
+
+    Route::post('editFirebaseToken', [FirebaseTokenController::class, 'update']);
+
 });

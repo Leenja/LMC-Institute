@@ -16,14 +16,14 @@ class TaskController extends Controller
         $this->taskService = $taskService;
     }
 
-    //the first correct version
-    /*public function assignTask(Request $request)
+    public function assignTask(Request $request)
     {
         $validated = $request->validate([
             'Description' => 'required|string',
-            'Deadline' => 'required|date',
+            'Deadline' => 'required|date|after_or_equal:today',
             'role_id' => 'nullable|integer',
-            'user_id' => 'nullable|integer'
+            'user_id' => 'nullable|integer',
+            'RequiresInvoice' => 'boolean',
         ]);
 
         $creatorId = auth()->id();
@@ -38,30 +38,6 @@ class TaskController extends Controller
         $result = $this->taskService->assignTask($creatorId, $validated);
 
         return response()->json($result['data'], $result['status']);
-    }*/
-
-    public function assignTask(Request $request)
-    {
-     $validated = $request->validate([
-        'Description' => 'required|string',
-        'Deadline' => 'required|date',
-        'role_id' => 'nullable|integer',
-        'user_id' => 'nullable|integer',
-        'RequiresInvoice' => 'boolean',
-     ]);
-
-     $creatorId = auth()->id();
-     if (!$creatorId) {
-        return response()->json(['message' => 'Unauthenticated.'], 401);
-     }
-
-     if (!empty($validated['user_id']) && $validated['user_id'] == $creatorId) {
-        return response()->json(['message' => 'You cannot assign a task to yourself.'], 400);
-     }
-
-     $result = $this->taskService->assignTask($creatorId, $validated);
-
-     return response()->json($result['data'], $result['status']);
     }
 
     public function completeUserTask($taskId): JsonResponse
@@ -125,10 +101,6 @@ class TaskController extends Controller
         }
     }
 
-    public function updateTaskStatus (Request $request) {
-
-    }
-
     public function assignTaskToSecretary(Request $request)
     {
         $validated = $request->validate([
@@ -150,4 +122,42 @@ class TaskController extends Controller
             return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 400);
         }
     }
+
+    public function deleteTask(int $taskId)
+    {
+        try {
+            $this->taskService->deleteTask($taskId);
+
+            return response()->json([
+                'message' => 'Task deleted successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], $e->getCode() ?: 400);
+        }
+    }
+
+
+    public function updateTask(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'Description' => 'nullable|string',
+            'Deadline' => 'nullable|date|after_or_equal:today',
+            'role_id' => 'nullable|integer',
+            'user_id' => 'nullable|integer',
+            'RequiresInvoice' => 'nullable|boolean',
+        ]);
+
+        $creatorId = auth()->id();
+        if (!$creatorId) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $result = $this->taskService->updateTask($id, $validated);
+
+        return response()->json($result['data'], $result['status']);
+
+    }
+
 }

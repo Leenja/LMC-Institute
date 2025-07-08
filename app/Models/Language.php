@@ -16,6 +16,11 @@ class Language extends Model
         'Description'
     ];
 
+    public function IndividualCourseRequest()
+    {
+        return $this->hasMany(IndividualCourseRequest::class ,'language_id');
+    }
+
     public function PlacementTest(){
         return $this->hasOne(PlacementTest::class, 'PlacementTestId');
     }

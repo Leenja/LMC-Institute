@@ -12,11 +12,13 @@ class RoomController extends Controller
 {
     protected $roomService;
 
-    public function __construct(RoomService $roomService){
-            $this->roomService = $roomService;
+    public function __construct(RoomService $roomService)
+    {
+        $this->roomService = $roomService;
     }
 
-    public function addRoom(Request $request){
+    public function addRoom(Request $request)
+    {
         $room = $this->roomService->addRoom($request->all());
 
         return response()->json([
@@ -27,19 +29,19 @@ class RoomController extends Controller
 
     public function updateRoom(Request $request, $id)
     {
-    $response = $this->roomService->updateRoom($id, $request->all());
+        $response = $this->roomService->updateRoom($id, $request->all());
 
-    if (!$response['status']) {
+        if (!$response['status']) {
+            return response()->json([
+                'message' => $response['message'],
+                'errors' => $response['errors'] ?? null,
+            ], 400); // Bad Request
+        }
+
         return response()->json([
             'message' => $response['message'],
-            'errors' => $response['errors'] ?? null,
-        ], 400); // Bad Request
-    }
-
-    return response()->json([
-        'message' => $response['message'],
-        'data' => $response['data'],
-    ]);
+            'data' => $response['data'],
+        ]);
     }
 
     public function showRooms()
@@ -57,7 +59,7 @@ class RoomController extends Controller
             if ($now->between(Carbon::parse($schedule->Start_Date), Carbon::parse($schedule->End_Date))) {
 
                 // Check if today is a course day
-                $today = $now->format('D'); // e.g., 'Tue'
+                $today = $now->format('D'); // ex:'Tue'
                 if (in_array($today, $schedule->CourseDays)) {
 
                     // Check if now is within course hours
@@ -78,14 +80,16 @@ class RoomController extends Controller
         return response()->json(Room::all());
     }
 
-    public function viewReservedRooms() {
+    public function viewReservedRooms()
+    {
 
         $reservedRooms = Room::where('Status', 'NotAvailable')->get();
 
         return response()->json($reservedRooms);
     }
 
-    public function viewAvailableRooms(Request $request) {
+    public function viewAvailableRooms(Request $request)
+    {
         $validated = $request->validate([
             'Start_Date' => 'required|date',
             'Start_Time' => 'required|date_format:H:i',

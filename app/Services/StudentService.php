@@ -27,7 +27,7 @@ class StudentService
     public function getEnrolledCourses($studentId)
     {
         return Enrollment::where('StudentId', $studentId)
-        ->with('course.CourseSchedule.Room','course.Language','course.User')->get()->pluck('course');
+            ->with('course.CourseSchedule.Room', 'course.Language', 'course.User')->get()->pluck('course');
     }
 
     //View my lessons for a course
@@ -39,11 +39,12 @@ class StudentService
             return ['error' => 'You are not enrolled in this course.'];
         }
 
-        return Lesson::where('CourseId', $courseId)->with('Course.CourseSchedule.Room','Course.Language','Course.User')->get();
+        return Lesson::where('CourseId', $courseId)->with('Course.CourseSchedule.Room', 'Course.Language', 'Course.User')->get();
     }
 
     //View teachers
-    public function getAllTeachers() {
+    public function getAllTeachers()
+    {
         return User::role('Teacher')
             ->select('id', 'name', 'email')
             ->with(['staffInfo:id,UserId,Photo,Description'])
@@ -51,14 +52,15 @@ class StudentService
     }
 
     //View available courses
-    public function getAvailableCourses() {
+    /*public function getAvailableCourses()
+    {
         $currentDate = Carbon::today();
 
-        $courses = Course::with(['CourseSchedule','User'])
+        $courses = Course::with(['CourseSchedule', 'User'])
             ->where('Status', 'Unactive')
-            ->whereHas('CourseSchedule', function($query) use ($currentDate) {
+            ->whereHas('CourseSchedule', function ($query) use ($currentDate) {
                 $query->where('Start_Date', '>=', $currentDate)
-                      ->where('End_Enroll', '>=', $currentDate);
+                    ->where('End_Enroll', '>=', $currentDate);
             })
             ->get()
             ->map(function ($course) {
@@ -67,7 +69,7 @@ class StudentService
                     'TeacherName' => $course->User->name ?? null,
                     'LanguageId' => $course->LanguageId,
                     'Description' => $course->Description,
-                    'Photo'=> $course->Photo,
+                    'Photo' => $course->Photo,
                     'Status' => $course->Status,
                     'Level' => $course->Level,
                     'course_schedule' => $course->CourseSchedule,
@@ -75,7 +77,46 @@ class StudentService
             });
 
         return $courses;
+    }*/
+
+    public function getAvailableCourses()
+    {
+        $currentDate = Carbon::today();
+
+        $courses = Course::with(['CourseSchedule.Room', 'User', 'Language'])
+            ->where('Status', 'Unactive')
+            ->whereHas('CourseSchedule', function ($query) use ($currentDate) {
+                $query->where('Start_Date', '>=', $currentDate)
+                    ->where('End_Enroll', '>=', $currentDate);
+            })
+            ->get()
+            ->map(function ($course) {
+                $schedule = $course->CourseSchedule->first(); // استخدم أول جدول فقط
+
+                return [
+                    'id' => $course->id,
+                    'TeacherName' => $course->User->name ?? null,
+                    'LanguageName' => $course->Language->Name ?? null,
+                    'Description' => $course->Description,
+                    'Photo' => $course->Photo,
+                    'Status' => $course->Status,
+                    'Level' => $course->Level,
+                    'course_schedule' => $schedule ? [
+                        'id' => $schedule->id,
+                        'Start_Date' => $schedule->Start_Date,
+                        'End_Date' => $schedule->End_Date,
+                        'Days' => $schedule->CourseDays,
+                        'Start_Time' => $schedule->Start_Time,
+                        'End_Time' => $schedule->End_Time,
+                        'NumberOfRoom' => $schedule->Room->NumberOfRoom ?? null,
+                    ] : null,
+                ];
+            });
+
+        return $courses;
     }
+
+
 
     public function getTeacher($teacherId)
     {
@@ -97,7 +138,7 @@ class StudentService
         $course = $selfTest->Lesson->Course;
 
         $isEnrolled = Enrollment::where('StudentId', $studentId)
-                                ->where('CourseId', $course->id)->exists();
+            ->where('CourseId', $course->id)->exists();
 
         if (!$isEnrolled) {
             return ['error' => 'You are not enrolled in this course'];
@@ -108,18 +149,93 @@ class StudentService
         $lastAnswered = $progress?->LastAnsweredQuestionId;
 
         $allQuestions = SelfTestQuestion::where('SelfTestId', $selfTestId)
-                                        ->orderBy('id')->pluck('id')->toArray();
+            ->orderBy('id')->pluck('id')->toArray();
 
         $nextQuestion = $lastAnswered
-        ? collect($allQuestions)->first(fn($id) => $id > $lastAnswered)
-        : $allQuestions[0] ?? null;
+            ? collect($allQuestions)->first(fn($id) => $id > $lastAnswered)
+            : $allQuestions[0] ?? null;
 
         if (!$nextQuestion) {
             return ['message' => 'Test completed'];
         }
 
-        return $this->studentRepository->getNextSelfTestQuestion($selfTestId,$nextQuestion);
+        return $this->studentRepository->getNextSelfTestQuestion($selfTestId, $nextQuestion);
     }
+
+    //lana
+
+    public function getSelfTest_ALL_Questions($studentId, $selfTestId)
+    {
+        $selfTest = $this->studentRepository->findWithLessonAndCourse($selfTestId);
+
+        if (!$selfTest) {
+            return ['error' => 'Self test not found'];
+        }
+
+        $course = $selfTest->Lesson->Course ?? null;
+
+        if (!$course) {
+            return ['error' => 'Course not found for this lesson'];
+        }
+
+        $questions = $this->studentRepository->getQuestionsBySelfTestId($selfTestId);
+
+        $questions->transform(function ($question) {
+            if ($question->Type === 'MCQ' && is_string($question->Choices)) {
+                $question->Choices = json_decode($question->Choices);
+            }
+            return $question;
+        });
+
+        return [
+            'SelfTest' => [
+                'id' => $selfTest->id,
+                'Title' => $selfTest->Title,
+                'Description' => $selfTest->Description,
+                'created_at' => $selfTest->created_at,
+            ],
+            'Lesson' => [
+                'id' => $selfTest->Lesson->id,
+                'Title' => $selfTest->Lesson->Title,
+                'Date' => $selfTest->Lesson->Date,
+                'StartTime' => $selfTest->Lesson->Start_Time,
+                'EndTime' => $selfTest->Lesson->End_Time,
+                'CourseTitle' => $course->Title,
+            ],
+            'Questions' => $questions,
+        ];
+    }
+
+
+    public function getSelfTestsByLesson($lessonId)
+    {
+        $selfTests = $this->studentRepository->getByLessonWithQuestions($lessonId);
+
+        if ($selfTests->isEmpty()) {
+            return ['error' => 'No self tests found for this lesson'];
+        }
+
+        $selfTests->transform(function ($selfTest) {
+            $selfTest->Questions->transform(function ($question) {
+                if ($question->Type === 'MCQ' && is_string($question->Choices)) {
+                    $question->Choices = json_decode($question->Choices);
+                }
+                return $question;
+            });
+            return [
+                'id' => $selfTest->id,
+                'Title' => $selfTest->Title,
+                'Description' => $selfTest->Description,
+                'created_at' => $selfTest->created_at,
+                'Questions' => $selfTest->Questions,
+            ];
+        });
+
+        return $selfTests;
+    }
+
+
+
 
     //View flash cards
     public function getAllFlashCards($studentId)
@@ -174,11 +290,13 @@ class StudentService
     }
 
     //Note
-    public function addNote($data) {
+    public function addNote($data)
+    {
         return $this->studentRepository->createNote($data);
     }
 
-    public function editNote($studentId, $noteId, $content) {
+    public function editNote($studentId, $noteId, $content)
+    {
         $note = Notes::find($noteId);
 
         if (!$note || $note->StudentId !== $studentId) {
@@ -188,7 +306,8 @@ class StudentService
         return $this->studentRepository->updateNote($note, $content);
     }
 
-    public function deleteNote($studentId, $noteId) {
+    public function deleteNote($studentId, $noteId)
+    {
         $note = Notes::find($noteId);
 
         if (!$note || $note->StudentId !== $studentId) {
@@ -198,7 +317,8 @@ class StudentService
         return $this->studentRepository->deleteNote($note);
     }
 
-    public function getMyNotes($studentId) {
+    public function getMyNotes($studentId)
+    {
         return Notes::where('StudentId', $studentId)->latest()->get();
     }
 
@@ -213,5 +333,4 @@ class StudentService
     {
         return $this->studentRepository->getRoadmapCourses($guestId);
     }
-
 }

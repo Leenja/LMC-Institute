@@ -44,7 +44,7 @@ class TaskRepository
             $userId = $filters['user_id'];
             $query->where(function ($q) use ($userId) {
                 $q->where('CreatorId', $userId)
-                  ->orWhereHas('users', fn($q) => $q->where('users.id', $userId));
+                    ->orWhereHas('users', fn($q) => $q->where('users.id', $userId));
             });
         }
 
@@ -60,7 +60,7 @@ class TaskRepository
         $query = Task::with(['users:id,name,email'])
             ->where(function ($q) use ($userId) {
                 $q->where('CreatorId', $userId)
-                  ->orWhereHas('users', fn($q) => $q->where('users.id', $userId));
+                    ->orWhereHas('users', fn($q) => $q->where('users.id', $userId));
             });
 
         if (!empty($filters['task_id'])) {
@@ -81,9 +81,9 @@ class TaskRepository
 
     public function getUsersByRoleExcluding(int $roleId, int $excludeUserId)
     {
-     return User::where('role_id', $roleId)
-               ->where('id', '!=', $excludeUserId)
-               ->get();
+        return User::where('role_id', $roleId)
+            ->where('id', '!=', $excludeUserId)
+            ->get();
     }
 
     public function assignUserToTask(int $userId, int $taskId)
@@ -94,4 +94,16 @@ class TaskRepository
             'Completed' => false,
         ]);
     }
+
+    public function findOrFail(int $id): Task
+    {
+        return Task::findOrFail($id);
+    }
+
+    public function save(Task $task): bool
+    {
+        return $task->save();
+    }
+
+
 }

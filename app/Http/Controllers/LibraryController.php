@@ -47,7 +47,6 @@ class LibraryController extends Controller
                 'item' => $result['item'],
                 'file_url' => $result['file_url'],
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }
@@ -68,10 +67,11 @@ class LibraryController extends Controller
                 'message' => "Library was created for this language: {$language->Name}",
                 'Library' => $library
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Failed to create library','error' => $e->getMessage(),], 500);
+                'message' => 'Failed to create library',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -104,7 +104,6 @@ class LibraryController extends Controller
                         'message' => "Library with ID {$id} not found or already deleted.",
                     ], 404);
             }
-
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to delete library due to an internal error.',
@@ -129,11 +128,11 @@ class LibraryController extends Controller
                 'item' => $result['item'],
                 'file_url' => $result['file_url'],
             ]);
-
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], $e->getCode());
         }
     }
+
 
     public function deleteFile($id)
     {
@@ -148,5 +147,27 @@ class LibraryController extends Controller
     public function downloadFile($id)
     {
         return $this->service->downloadFile($id);
+    }
+
+    /*public function getLibraryByLanguage($languageId)
+    {
+        $library = Library::where('LanguageId', $languageId)->first();
+        if (!$library) {
+            return response()->json(['message' => 'Library not found'], 404);
+        }
+        return response()->json($library);
+    }*/
+
+    public function getLibraryByLanguage($languageId)
+    {
+        $library = Library::with('language') // تحميل علاقة اللغة
+            ->where('LanguageId', $languageId)
+            ->first();
+
+        if (!$library) {
+            return response()->json(['message' => 'Library not found'], 404);
+        }
+
+        return response()->json($library);
     }
 }

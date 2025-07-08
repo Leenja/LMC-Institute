@@ -54,6 +54,13 @@ class RoomService
             'Status' => 'sometimes|in:Available,NotAvailable',
         ]);
 
+        if (empty($data['Capacity']) && empty($data['NumberOfRoom']) && empty($data['Status'])) {
+            return [
+                'status' => false,
+                'message' => 'No data provided to update.',
+            ];
+        }
+
         if ($validator->fails()) {
             return [
                 'status' => false,

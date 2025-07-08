@@ -26,4 +26,11 @@ class UserTask extends Pivot{
     public function Task(){
         return $this->belongsTo(Task::class, 'TaskId');
     }
+
+    public function updateRequiresInvoice(int $taskId, int $userId, bool $value): bool
+{
+    return UserTask::where('TaskId', $taskId)
+                   ->where('UserId', $userId)
+                   ->update(['RequiresInvoice' => $value]);
+}
 }

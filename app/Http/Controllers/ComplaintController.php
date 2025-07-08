@@ -105,21 +105,21 @@ class ComplaintController extends Controller
     {
      $response = $this->ComplaintService->getTeacherComplaints($teacherId);
 
-     return response()->json($response, $response['status_code']);
+    return response()->json($response, /*$response['status_code']*/);
     }
 
     public function showPendingComplaints()
     {
      $response = $this->ComplaintService->getComplaintsByStatus('Pending');
 
-     return response()->json($response, $response['status_code']);
+     return response()->json($response, /*$response['status_code']*/);
     }
 
     public function showSolvedComplaints()
     {
      $response = $this->ComplaintService->getComplaintsByStatus('Solved');
 
-     return response()->json($response, $response['status_code']);
+     return response()->json($response, /*$response['status_code']*/);
     }
 
     public function checkComplaint($complaintId)

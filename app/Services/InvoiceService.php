@@ -65,7 +65,6 @@ class InvoiceService
                 'recipients' => $secretaries->pluck('id'),
                 'image_url' => $imageUrl
             ];
-
         } catch (Exception $e) {
             DB::rollBack();
 
@@ -112,7 +111,6 @@ class InvoiceService
                 'all_approved' => $pendingRecipients === 0,
                 'current_user_approved' => $recipientRecord ? $recipientRecord->Status === 'Approved' : false
             ];
-
         } catch (Exception $e) {
             DB::rollBack();
             throw $e;
@@ -145,5 +143,54 @@ class InvoiceService
             'pending_approvals' => $pendingCount,
             'all_approved' => $pendingCount === 0
         ];
+    }
+
+    public function getFormattedInvoices()
+    {
+        $invoices = $this->invoiceRepository->getAllInvoicesWithRelations();
+
+        if ($invoices->isEmpty()) {
+            return [
+                'message' => 'No invoices found',
+                'data' => []
+            ];
+        }
+
+        $data = $invoices->map(function ($invoice) {
+            return [
+                'id'         => $invoice->id,
+                'amount'     => $invoice->Amount,
+                'image'      => $invoice->Image,
+                'status'     => $invoice->Status,
+                'created_at' => $invoice->created_at,
+
+                'creator'    => [
+                    'id'    => $invoice->creator?->id,
+                    'name'  => $invoice->creator?->name,
+                    'email' => $invoice->creator?->email,
+                ],
+
+                'task' => [
+                    'id'          => $invoice->task?->id,
+                    'description' => $invoice->task?->Description,
+                    'status'      => $invoice->task?->Status,
+                    'deadline'    => $invoice->task?->Deadline,
+                ],
+
+                'recipients' => $invoice->recipients->map(function ($recipient) {
+                    return [
+                        'id'     => $recipient->id,
+                        'status' => $recipient->Status,
+                        'user'   => [
+                            'id'    => $recipient->user?->id,
+                            'name'  => $recipient->user?->name,
+                            'email' => $recipient->user?->email,
+                        ],
+                    ];
+                })->toArray(),
+            ];
+        });
+
+        return ['data' => $data];
     }
 }

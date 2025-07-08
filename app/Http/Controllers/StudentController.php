@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Enrollment;
 use App\Models\Language;
 use App\Models\LMCInfo;
+use App\Models\SelfTest;
 use App\Models\SelfTestProgress;
 use App\Models\SelfTestQuestion;
 use App\Models\User;
@@ -19,9 +21,10 @@ class StudentController extends Controller
         $this->studentService = $studentService;
     }
 
-    public function viewLMCInfo() {
+    public function viewLMCInfo()
+    {
         $info = LMCInfo::latest()->first();
-        $teachers = User::where('role_id',3)->get();
+        $teachers = User::where('role_id', 3)->get();
         $languages = Language::all();
 
         return response()->json([
@@ -33,7 +36,8 @@ class StudentController extends Controller
         ]);
     }
 
-    public function viewEnrolledCourses() {
+    public function viewEnrolledCourses()
+    {
         $studentId = auth()->user()->id;
 
         $courses = $this->studentService->getEnrolledCourses($studentId);
@@ -44,7 +48,8 @@ class StudentController extends Controller
         ]);
     }
 
-    public function viewMyLessons($courseId) {
+    public function viewMyLessons($courseId)
+    {
         $studentId = auth()->user()->id;
 
         $lessons = $this->studentService->getMyLessons($studentId, $courseId);
@@ -59,7 +64,8 @@ class StudentController extends Controller
         ]);
     }
 
-    public function viewTeachers() {
+    public function viewTeachers()
+    {
         $teachers = $this->studentService->getAllTeachers();
 
         return response()->json([
@@ -76,7 +82,8 @@ class StudentController extends Controller
         ]);
     }
 
-    public function viewTeacher($teacherId){
+    public function viewTeacher($teacherId)
+    {
         $teacher = $this->studentService->getTeacher($teacherId);
 
         if (!$teacher) {
@@ -86,17 +93,18 @@ class StudentController extends Controller
         return response()->json([
             'message' => 'Teacher retrieved successfully.',
             'Teacher' =>
-                [
-                    'id' => $teacher->id,
-                    'name' => $teacher->name,
-                    'email' => $teacher->email,
-                    'Photo' => $teacher->staffInfo->Photo,
-                    'Description' => $teacher->staffInfo->Description,
-                ],
+            [
+                'id' => $teacher->id,
+                'name' => $teacher->name,
+                'email' => $teacher->email,
+                'Photo' => $teacher->staffInfo->Photo,
+                'Description' => $teacher->staffInfo->Description,
+            ],
         ]);
     }
 
-    public function viewAvailableCourses() {
+    public function viewAvailableCourses()
+    {
         $courses = $this->studentService->getAvailableCourses();
 
         return response()->json([
@@ -105,9 +113,7 @@ class StudentController extends Controller
         ]);
     }
 
-    public function takePlacementTest() {
-
-    }
+    public function takePlacementTest() {}
 
     public function getSelfTestQuestions($selfTestId)
     {
@@ -122,6 +128,43 @@ class StudentController extends Controller
         return response()->json([
             'message' => 'Self test questions retrieved successfully.',
             'Questions' => $questions,
+        ]);
+    }
+
+    public function getSelfTest_ALL_Questions($selfTestId)
+    {
+        $studentId = auth()->id();
+
+        $result = $this->studentService->getSelfTest_ALL_Questions($studentId, $selfTestId);
+
+        if (isset($result['error'])) {
+            return response()->json(['message' => $result['error']], 404);
+        }
+
+        return response()->json([
+            'message' => 'Self test questions retrieved successfully.',
+            'SelfTest' => $result['SelfTest'],
+            'Lesson' => $result['Lesson'],
+            'Questions' => $result['Questions'],
+        ]);
+    }
+
+
+    public function getSelfTestsByLesson($lessonId)
+    {
+        if (!\App\Models\Lesson::where('id', $lessonId)->exists()) {
+            return response()->json(['message' => 'Lesson not found'], 404);
+        }
+
+        $result = $this->studentService->getSelfTestsByLesson($lessonId);
+
+        if (isset($result['error'])) {
+            return response()->json(['message' => $result['error']], 404);
+        }
+
+        return response()->json([
+            'message' => 'Self tests retrieved successfully.',
+            'SelfTests' => $result,
         ]);
     }
 
@@ -205,7 +248,8 @@ class StudentController extends Controller
         return response()->json(['message' => 'Note deleted successfully.']);
     }
 
-    public function viewMyNotes() {
+    public function viewMyNotes()
+    {
         $studentId = auth()->user()->id;
 
         $notes = $this->studentService->getMyNotes($studentId);
@@ -222,7 +266,8 @@ class StudentController extends Controller
         ]);
     }
 
-    public function viewAllFlashCards() {
+    public function viewAllFlashCards()
+    {
         $studentId = auth()->user()->id;
         $flashCards = $this->studentService->getAllFlashCards($studentId);
 
@@ -232,7 +277,8 @@ class StudentController extends Controller
         ]);
     }
 
-    public function viewFlashCard($flashcardId) {
+    public function viewFlashCard($flashcardId)
+    {
         $studentId = auth()->user()->id;
         $flashCard = $this->studentService->getFlashCard($studentId, $flashcardId);
 
@@ -284,11 +330,10 @@ class StudentController extends Controller
         ]);
     }
 
-    public function requestPrivateCourse() {
+    public function requestPrivateCourse() {}
 
-    }
-
-    public function viewProgress() {
+    public function viewProgress()
+    {
         $studentId = auth()->user()->id;
 
         $progress = $this->studentService->getProgress($studentId);
@@ -299,7 +344,8 @@ class StudentController extends Controller
         ]);
     }
 
-    public function viewRoadmap() {
+    public function viewRoadmap()
+    {
         $guestId = auth()->user()->id;
 
         $roadmap = $this->studentService->getRoadmap($guestId);

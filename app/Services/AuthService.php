@@ -34,13 +34,13 @@ class AuthService
             throw new \Exception('Role not found or guard mismatch', 422);
         }
 
-        if (in_array($role->name, ['SuperAdmin', 'Secretary', 'Teacher', 'Logistic'])) {
+        if (in_array($role->name, ['SuperAdmin', 'Secretarya', 'Teacher', 'Logistic'])) {
         StaffInfo::create([
             'UserId' => $user->id,
             'Photo' => null,
             'Description' => null,
         ]);
-    }
+     }
 
         $permissions = $this->roleRepository->assignRoleToUser($user, $role);
        // $token = JWTAuth::fromUser($user);

@@ -17,6 +17,9 @@ return new class extends Migration
             $table->string('Photo')->nullable();
             $table->text('Description')->nullable();
             $table->timestamps();
+        
+            $table->softDeletes();  // <-- هذا السطر لإضافة soft deletes
+        
         });
     }
 

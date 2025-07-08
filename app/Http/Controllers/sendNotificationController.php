@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\DeviceToken;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification;
 
 use Illuminate\Support\Facades\App;
+
+use Illuminate\Support\Facades\Http;
 
 
 class SendNotificationController extends Controller
@@ -54,4 +57,5 @@ class SendNotificationController extends Controller
             ], 500);
         }
     }
+
 }

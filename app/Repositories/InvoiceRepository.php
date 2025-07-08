@@ -28,18 +28,23 @@ class InvoiceRepository
     public function findRecipient($invoiceId, $userId)
     {
         return InvoiceRecipient::where('InvoiceId', $invoiceId)
-                ->where('UserId', $userId)->first();
+            ->where('UserId', $userId)->first();
     }
 
     public function countPendingRecipients($invoiceId)
     {
         return InvoiceRecipient::where('InvoiceId', $invoiceId)
-                ->where('Status', '!=', 'Approved')->count();
+            ->where('Status', '!=', 'Approved')->count();
     }
 
     public function updateInvoiceStatus(Invoice $invoice, $status)
     {
         $invoice->update(['Status' => $status]);
+    }
+
+    public function getAllInvoicesWithRelations()
+    {
+        return Invoice::with(['task', 'creator', 'recipients.user'])->get();
     }
 
     /*public function getSecretaries()
@@ -48,18 +53,18 @@ class InvoiceRepository
     }*/
 
     public function getSecretaries()
-{
-    // First find the role_id where role name is 'Secretarya'
-    $secretaryRoleId = DB::table('roles')
-                        ->where('name', 'Secretarya')
-                        ->value('id');
-    
-    if (!$secretaryRoleId) {
-        return collect(); // Return empty collection if role not found
-    }
+    {
+        // First find the role_id where role name is 'Secretarya'
+        $secretaryRoleId = DB::table('roles')
+            ->where('name', 'Secretarya')
+            ->value('id');
 
-    return User::where('role_id', $secretaryRoleId)->get();
-}
+        if (!$secretaryRoleId) {
+            return collect(); // Return empty collection if role not found
+        }
+
+        return User::where('role_id', $secretaryRoleId)->get();
+    }
 
     public function createRecipient($invoiceId, $userId)
     {

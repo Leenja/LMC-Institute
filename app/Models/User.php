@@ -8,6 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 //use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Database\Eloquent\SoftDeletes;  // استيراد SoftDeletes
 
 
 
@@ -15,9 +16,10 @@ use Illuminate\Support\Collection;
 
 
 //class User extends Authenticatable
-class User extends Authenticatable /*implements JWTSubject*/{
+class User extends Authenticatable /*implements JWTSubject*/
+{
 
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     //protected $guard_name = 'api'; // Important for Spatie with JWT
 
@@ -35,11 +37,18 @@ class User extends Authenticatable /*implements JWTSubject*/{
         'role_id',
         'remember_token',
         'email_verified_at',
+        'deleted_at'
     ];
 
-    public function getJWTIdentifier() { return $this->getKey(); }
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
 
-    public function getJWTCustomClaims() { return []; }
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
 
     public function getAllPermissions(): Collection
     {
@@ -52,12 +61,33 @@ class User extends Authenticatable /*implements JWTSubject*/{
     public function hasPermissionTo($permission, $guardName = null): bool
     {
         return $this->hasPermissionThroughRole($permission) ||
-               parent::hasPermissionTo($permission, $guardName);
+            parent::hasPermissionTo($permission, $guardName);
+    }
+
+    public function userNotifications()
+    {
+        return $this->hasMany(UserNotification::class);
+    }
+
+    public function devicetoken()
+    {
+        return $this->hasMany(DeviceToken::class, 'user_id');
+    }
+
+    public function firebaseTokens()
+    {
+        return $this->hasMany(DeviceToken::class, 'user_id');
+    }
+
+
+    public function IndividualCourseRequest()
+    {
+        return $this->hasMany(IndividualCourseRequest::class, 'user_id');
     }
 
     public function invoiceRecipients()
     {
-       return $this->hasMany(InvoiceRecipient::class, 'UserId');
+        return $this->hasMany(InvoiceRecipient::class, 'UserId');
     }
 
     // If you want to get all invoices where the user is the creator:
@@ -87,31 +117,37 @@ class User extends Authenticatable /*implements JWTSubject*/{
         return $this->hasMany(Test::class, 'TestId');
     }
 
-    public function Attendance(){
+    public function Attendance()
+    {
         return $this->hasMany(Attendance::class, 'AttendanceId');
     }
 
     public function announcements()
     {
-     return $this->hasMany(Announcement::class, 'CreatorId');
+        return $this->hasMany(Announcement::class, 'CreatorId');
     }
 
-    public function UserTask(){
+    public function UserTask()
+    {
         return $this->hasMany(UserTask::class, 'UserTaskId');
     }
-    public function Enrollment(){
+    public function Enrollment()
+    {
         return $this->hasMany(Enrollment::class, 'EnrollmentId');
     }
 
-    public function Complaint(){
+    public function Complaint()
+    {
         return $this->hasMany(Complaint::class, 'ComplaintId');
     }
 
-    public function PlacementTest(){
+    public function PlacementTest()
+    {
         return $this->hasMany(PlacementTest::class, 'PlacementTestId');
     }
 
-    public function Course(){
+    public function Course()
+    {
         return $this->hasMany(Course::class, 'CourseId');
     }
 
@@ -139,5 +175,4 @@ class User extends Authenticatable /*implements JWTSubject*/{
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
-
 }

@@ -55,6 +55,13 @@ class LanguageService
             ];
         }
 
+        if (empty($data['Name']) && empty($data['Description'])) {
+            return [
+                'status' => false,
+                'message' => 'No data provided to update.',
+            ];
+        }
+
         $validator = Validator::make($data, [
             'Name' => 'sometimes|string|unique:languages,Name,' . $id,
             'Description' => 'sometimes|string',

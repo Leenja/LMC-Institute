@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeviceToken;
 use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+
+use Illuminate\Support\Facades\Auth;
 
 
 class AuthController extends Controller
@@ -56,6 +59,7 @@ class AuthController extends Controller
         }
     }
 
+   //this the correct version without notification
    public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -85,6 +89,9 @@ class AuthController extends Controller
         }
     }
 
+
+
+   //this the correct version without notification
     public function logout()
     {
         try {
