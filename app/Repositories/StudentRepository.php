@@ -5,11 +5,14 @@ namespace App\Repositories;
 use App\Models\Attendance;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\FinalTestAnswer;
+use App\Models\FinalTestProgress;
 use App\Models\Notes;
 use App\Models\PlacementTest;
 use App\Models\SelfTest;
 use App\Models\SelfTestQuestion;
 use App\Models\StudentProgress;
+use App\Models\TestQuestion;
 use Carbon\Carbon;
 
 class StudentRepository
@@ -99,7 +102,92 @@ class StudentRepository
         return SelfTest::with('Questions')->where('LessonId', $lessonId)->get();
     }
 
+    //Get final test question
+    public function fetchNextFinalTestQuestion($studentId, $testId)
+    {
+        $answeredIds = FinalTestAnswer::where('StudentId', $studentId)
+            ->where('TestId', $testId)
+            ->pluck('QuestionId');
 
+        $nextQuestion = TestQuestion::where('TestId', $testId)
+            ->whereNotIn('id', $answeredIds)
+            ->orderBy('id')
+            ->first();
+
+        if (!$nextQuestion) {
+            return ['error' => 'You have completed this test.'];
+        }
+
+        return [
+            'id' => $nextQuestion->id,
+            'TestId' => $nextQuestion->TestId,
+            'Type' => $nextQuestion->Type,
+            'Point' => $nextQuestion->Point,
+            'Media' => $nextQuestion->Media,
+            'QuestionText' => $nextQuestion->QuestionText,
+            'Choices' => in_array($nextQuestion->Type, ['MCQ', 'true_false', 'translate']) ? $nextQuestion->Choices : null,
+        ];
+    }
+
+    //Take final test
+    public function handleFinalTestAnswerSubmission($studentId, $data)
+    {
+        $question = TestQuestion::find($data['QuestionId']);
+
+        if (!$question || $question->TestId != $data['TestId']) {
+            throw new \Exception('Invalid question for this test.');
+        }
+
+        $isCorrect = $this->normalizeAnswer($data['Answer']) === $this->normalizeAnswer($question->CorrectAnswer);
+
+        FinalTestAnswer::updateOrCreate(
+            [
+                'StudentId' => $studentId,
+                'TestId' => $data['TestId'],
+                'QuestionId' => $data['QuestionId'],
+            ],
+            [
+                'Answer' => $data['Answer'],
+                'isCorrect' => $isCorrect
+            ]
+        );
+
+        $progress = FinalTestProgress::updateOrCreate(
+            ['StudentId' => $studentId, 'TestId' => $data['TestId']],
+            ['LastAnsweredQuestionId' => $data['QuestionId']]
+        );
+
+        // Update score if correct
+        if ($isCorrect) {
+            $scoreIncrement = $question->Point ?? 0;
+            $progress->increment('Score', $scoreIncrement);
+        }
+
+        $hasNext = TestQuestion::where('TestId', $data['TestId'])
+            ->whereNotIn('id', FinalTestAnswer::where('StudentId', $studentId)
+                ->where('TestId', $data['TestId'])
+                ->pluck('QuestionId'))
+            ->exists();
+
+        return array_filter([
+            'message' => $isCorrect ? 'Correct answer!' : 'Wrong answer!',
+            'correctAnswer' => $isCorrect ? null : $question->CorrectAnswer,
+            'nextAvailable' => $hasNext
+        ], fn($value) => !is_null($value));
+    }
+
+    //Get all final test answers
+    public function fetchAllFinalTestQuestions($studentId, $testId)
+    {
+        return TestQuestion::where('TestId', $testId)
+            ->select('id', 'TestId','Type','Point','Media','QuestionText','Choices')
+            ->orderBy('id')->get();
+    }
+
+    protected function normalizeAnswer($answer)
+    {
+        return strtolower(trim(preg_replace('/\s+/', ' ', $answer)));
+    }
 
     //Note
     public function createNote($data)

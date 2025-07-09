@@ -24,6 +24,11 @@ class Test extends Model
     }
 
     public function Course(){
-        return $this->hasOne(Course::class, 'CourseId');
+        return $this->belongsTo(Course::class, 'CourseId');
+    }
+
+    public function Questions()
+    {
+        return $this->hasMany(TestQuestion::class, 'TestId');
     }
 }

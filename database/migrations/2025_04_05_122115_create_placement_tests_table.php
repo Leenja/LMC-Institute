@@ -15,11 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('GuestId')->constrained('users');
             $table->foreignId('LanguageId')->constrained('languages');
-            $table->string('Level');
-            $table->float('AudioScore');
-            $table->float('ReadingScore');
-            $table->float('SpeakingScore');
-            $table->float('TotalScore');
+            $table->string('Level')->default('Not Set');
+            $table->float('AudioScore')->nullable();
+            $table->float('ReadingScore')->nullable();
+            $table->float('SpeakingScore')->nullable();
+            $table->float('TotalScore')->nullable();
             $table->enum('Status', ['Pending','Completed'])->default('Pending');
             $table->timestamps();
         });

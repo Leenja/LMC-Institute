@@ -30,114 +30,6 @@ class TaskService
         $this->userTaskRepo = $userTaskRepo;
     }
 
-    //lana
-
-    /* public function updateTask(int $taskId, int $updaterId, array $data): array
-    {
-        DB::beginTransaction();
-
-        try {
-            $task = $this->taskRepo->findOrFail($taskId);
-
-            // تحديث الوصف والموعد النهائي
-            if (array_key_exists('Description', $data)) {
-                $task->Description = $data['Description'];
-            }
-
-            if (array_key_exists('Deadline', $data)) {
-                $task->Deadline = $data['Deadline'];
-            }
-
-            $hasUserOrRole = !empty($data['user_id']) || !empty($data['role_id']);
-            $hasRequiresInvoice = array_key_exists('RequiresInvoice', $data);
-            $requiresInvoiceValue = $hasRequiresInvoice ? $data['RequiresInvoice'] : null;
-
-            //$isValidRequiresInvoice = is_bool($requiresInvoiceValue);
-
-            // نتحقق إذا القيمة صحيحة (true أو false أو 0)
-            $isValidRequiresInvoice = in_array($requiresInvoiceValue, [true, false, 0], true);
-
-            $users = collect();
-            if ($hasUserOrRole) {
-                // حذف التعيينات القديمة
-                $this->userTaskRepo->deleteByTaskId($taskId);
-
-                // جلب المستخدمين الجدد
-                $users = $this->getUsersToUpdateAssign($data, $updaterId);
-
-                if ($users->isEmpty()) {
-                    throw new \Exception('No valid users to assign the task to.', 400);
-                }
-
-
-                if ($hasRequiresInvoice) {
-                    $task->RequiresInvoice = $requiresInvoiceValue;
-
-                    foreach ($users as $user) {
-                        $user->loadMissing('roles'); // مهم
-
-                        $userRequiresInvoice = ($requiresInvoiceValue === true && $user->hasRole('logistic'));
-
-                        $this->userTaskRepo->create([
-                            'UserId'          => $user->id,
-                            'TaskId'          => $taskId,
-                            'RequiresInvoice' => $isValidRequiresInvoice ? $userRequiresInvoice : false,
-                            'Completed'       => false,
-                        ]);
-                    }
-                } else {
-                    // لا يوجد RequiresInvoice - استخدم القيمة الحالية
-                    $currentRequiresInvoice = $task->RequiresInvoice;
-                    $isCurrentValid = is_bool($currentRequiresInvoice);
-
-                    foreach ($users as $user) {
-                        $user->loadMissing('roles');
-
-                        $userRequiresInvoice = ($isCurrentValid && $currentRequiresInvoice === true && $user->hasRole('logistic'));
-
-                        $this->userTaskRepo->create([
-                            'UserId'          => $user->id,
-                            'TaskId'          => $taskId,
-                            'RequiresInvoice' => $userRequiresInvoice,
-                            'Completed'       => false,
-                        ]);
-                    }
-                }
-            } elseif ($hasRequiresInvoice) {
-                $task->RequiresInvoice = $requiresInvoiceValue;
-
-                if ($isValidRequiresInvoice) {
-                    $users = $task->assignedUsers()->with('roles')->get();
-
-                    foreach ($users as $user) {
-                        $userRequiresInvoice = ($requiresInvoiceValue === true && $user->hasRole('logistic'));
-
-                        $this->userTaskRepo->updateRequiresInvoice($taskId, $user->id, $userRequiresInvoice);
-                    }
-                }
-            }
-
-            $this->taskRepo->save($task);
-
-            DB::commit();
-
-            return [
-                'status' => 200,
-                'data' => [
-                    'message' => 'Task updated successfully',
-                    'task' => $task->load('assignedUsers.roles'),
-                ],
-            ];
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return [
-                'status' => 500,
-                'error' => $e->getMessage(),
-            ];
-        }
-    }*/
-
     public function updateTask(int $taskId, array $data): array
     {
         $task = $this->taskRepo->findOrFail($taskId);
@@ -256,39 +148,6 @@ class TaskService
         }
     }
 
-
-    //end lana
-
-    //the frst correct version
-    /*public function assignTask(int $creatorId, array $data): array
-    {
-        $task = $this->taskRepo->create([
-            'CreatorId'    => $creatorId,
-            'Description'  => $data['Description'],
-            'Deadline'     => $data['Deadline'],
-            'Status'       => 'Pending',
-            'Completed_at' => null,
-        ]);
-
-        $users = $this->getUsersToAssign($data, $creatorId);
-
-        if ($users->isEmpty()) {
-            $this->taskRepo->delete($task->id);
-            throw new \Exception('No valid users to assign the task to.', 400);
-        }
-
-        $this->assignTaskToUsers($task->id, $users);
-
-        return [
-            'data' => [
-                'message' => 'Task assigned successfully.',
-                'task' => $task,
-                'assigned_users' => $users->pluck('id'),
-            ],
-            'status' => 200,
-        ];
-    }*/
-
     public function assignTask(int $creatorId, array $data): array
     {
         $task = $this->taskRepo->create([
@@ -339,40 +198,6 @@ class TaskService
 
         return $users->unique('id');
     }
-
-    /*the first correct version without modar
-    protected function assignTaskToUsers(int $taskId, Collection $users): void
-    {
-        foreach ($users as $user) {
-            $this->userTaskRepo->create([
-                'UserId' => $user->id,
-                'TaskId' => $taskId,
-                'Completed' => false,
-            ]);
-        }
-    }*/
-
-    /* protected function assignTaskToUsers(int $taskId, Collection $users, bool $requiresInvoice): void
-    {
-
-        foreach ($users as $user) {
-            $userRole = $user->roles()->first(); // Spatie Role
-
-            $userRequiresInvoice = false;
-
-            if ($requiresInvoice === true) {
-                // تحقق هل لدى المستخدم دور "logistic"
-                $userRequiresInvoice = $userRole && strtolower($userRole->name) === 'logistic';
-            }
-
-            $this->userTaskRepo->create([
-                'UserId'          => $user->id,
-                'TaskId'          => $taskId,
-                'RequiresInvoice' => $userRequiresInvoice,
-                'Completed'       => false,
-            ]);
-        }
-    }*/
 
     protected function assignTaskToUsers(int $taskId, Collection $users, bool $requiresInvoice): Collection
     {

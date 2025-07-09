@@ -10,7 +10,10 @@ use App\Models\FlashCard;
 use App\Models\Lesson;
 use App\Models\SelfTest;
 use App\Models\StudentProgress;
+use App\Models\Test;
+use App\Models\TestQuestion;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
@@ -265,7 +268,6 @@ class StaffRepository
     }
 
     //Flash cards
-
     public function createFlashCard($data)
     {
         $lesson = Lesson::findOrFail($data['LessonId']);
@@ -326,5 +328,105 @@ class StaffRepository
         $selftest->delete();
 
         return true;
+    }
+
+        public function createFinalTest($data, $teacherId)
+    {
+        return Test::create([
+            'CourseId' => $data['CourseId'],
+            'TeacherId' => $teacherId,
+            'Title' => $data['Title'],
+            'Duration' => $data['Duration'],
+            'Mark' => $data['Mark'],
+        ]);
+    }
+
+    public function updateFinalTest($data, $teacherId)
+    {
+        $test = Test::find($data['TestId']);
+
+        if (!$test || $test->TeacherId !== $teacherId) {
+            throw new Exception('You are not authorized to edit this test');
+        }
+
+        $test->update($data);
+        return $test;
+    }
+
+    public function deleteFinalTest($id, $teacherId)
+    {
+        $test = Test::find($id);
+
+        if (!$test || $test->TeacherId !== $teacherId) {
+            throw new Exception('You are not authorized to delete this test');
+        }
+
+        $test->delete();
+    }
+
+    public function createFinalTestQuestion($data, $mediaFile, $teacherId)
+    {
+        $test = Test::find($data['TestId']);
+        if (!$test || $test->TeacherId !== $teacherId) {
+            throw new Exception('You are not authorized to add questions to this test');
+        }
+
+        if ($mediaFile) {
+            $fileName = time() . '_' . $mediaFile->getClientOriginalName();
+            $mediaFile->move(public_path('storage/FinalTestsMedia'), $fileName);
+            $data['Media'] = url('storage/FinalTestsMedia/' . $fileName);
+        }
+
+        return TestQuestion::create($data);
+    }
+
+    public function updateFinalTestQuestion($data, $mediaFile, $teacherId)
+    {
+        $question = TestQuestion::with('test')->find($data['TestQuestionId']);
+
+        if (!$question || $question->Test->TeacherId !== $teacherId) {
+            throw new Exception('You are not authorized to edit this test question');
+        }
+
+        if ($mediaFile) {
+            $fileName = time() . '_' . $mediaFile->getClientOriginalName();
+            $mediaFile->move(public_path('storage/FinalTestsMedia'), $fileName);
+            $data['Media'] = url('storage/FinalTestsMedia/' . $fileName);
+        }
+
+        $question->update($data);
+        return $question;
+    }
+
+    public function deleteFinalTestQuestion($id, $teacherId)
+    {
+        $question = TestQuestion::with('test')->find($id);
+
+        if (!$question || $question->Test->TeacherId !== $teacherId) {
+            throw new Exception('You are not authorized to delete this test question');
+        }
+
+        $question->delete();
+    }
+
+    public function getFinalTestQuestions($testId, $teacherId)
+    {
+        $test = Test::where('id', $testId)->where('TeacherId', $teacherId)->first();
+        if (!$test) {
+            throw new Exception('You are not authorized to view questions for this test');
+        }
+        return $test->Questions;
+    }
+
+    public function getFinalTestQuestion($questionId, $teacherId)
+    {
+        $question = TestQuestion::with('test')
+            ->where('id', $questionId)
+            ->first();
+
+        if (!$question || $question->test->TeacherId !== $teacherId) {
+            throw new Exception('You are not authorized to view this question');
+        }
+        return $question;
     }
 }

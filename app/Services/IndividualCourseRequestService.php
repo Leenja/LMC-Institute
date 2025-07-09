@@ -27,7 +27,6 @@ class IndividualCourseRequestService
     //need an update that should send a notification to secretarya
     public function handleCourseRequest($languageId, $user, $description): JsonResponse
     {
-        // 1. التحقق من وجود اللغة
         $language = Language::find($languageId);
         if (!$language) {
             return response()->json([
@@ -35,10 +34,9 @@ class IndividualCourseRequestService
             ], 404);
         }
 
-        // 2. جلب آخر اختبار للغة
         $lastTest = PlacementTest::where('GuestId', $user->id)
             ->where('LanguageId', $languageId)
-            ->where('Status', 'Completed') 
+            ->where('Status', 'Completed')
             ->latest()
             ->first();
 
@@ -50,7 +48,6 @@ class IndividualCourseRequestService
             ], 403);
         }
 
-        // 3. التحقق من تاريخ الاختبار
         if ($lastTest->created_at->lt(Carbon::now()->subDays(30))) {
             return response()->json([
                 'message' => 'Your placement test for this language is older than 30 days. Please retake the test to assess your level accurately.',
@@ -59,7 +56,6 @@ class IndividualCourseRequestService
             ], 403);
         }
 
-        // 4. إذا كان لديه اختبار حديث (أقل من 30 يومًا) -> إنشاء الطلب
         $request = $this->repo->createRequest($user->id, $languageId, $description);
 
         return response()->json([
@@ -80,12 +76,10 @@ class IndividualCourseRequestService
             return response()->json(['message' => 'The request does not exist'], 404);
         }
 
-        // حفظ رد السكرتير
         $request->secretarya_response = $responseText;
         $request->status = 'Done';
         $request->save();
 
-        // تحميل علاقات المستخدم واللغة
         $request->load(['user', 'language']);
 
         return response()->json([
@@ -93,14 +87,6 @@ class IndividualCourseRequestService
             'request' => $request,
         ]);
     }
-
-    /*public function getUserRequests($user)
-    {
-        return IndividualCourseRequest::with(['user', 'language'])
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }*/
 
     public function getUserRequests($user)
     {
@@ -115,12 +101,6 @@ class IndividualCourseRequestService
         return $query->get();
     }
 
-    /* public function getAllRequests()
-    {
-        return IndividualCourseRequest::with(['user.roles', 'language'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }*/
 
     public function getAllRequests()
     {

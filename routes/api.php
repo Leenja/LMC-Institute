@@ -69,6 +69,22 @@ Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->g
 
     Route::post('editLMCInfo', [ManagerController::class, 'editLMCInfo']);
 
+    Route::post('upload-placement-questions', [ManagerController::class, 'uploadQuestions']);
+
+    Route::post('markCorrectAnswer/{id}', [ManagerController::class, 'markCorrectAnswer']);
+
+    Route::post('addOrUpdatePTMedia/{id}', [ManagerController::class, 'addOrUpdatePTMedia']);
+
+    Route::get('getPTQuestionsWithAnswers', [ManagerController::class, 'getPTQuestionsWithAnswers']);
+
+    Route::get('getPTQuestion/{id}', [ManagerController::class, 'getPTQuestion']);
+
+    Route::post('addPlacementTestQuestion', [ManagerController::class, 'addPlacementTestQuestion']);
+
+    Route::post('editPlacementTestQuestion/{id}', [ManagerController::class, 'editPlacementTestQuestion']);
+
+    Route::delete('deletePlacementTestQuestion/{id}', [ManagerController::class, 'deletePlacementTestQuestion']);
+
     Route::get('getRoles', [StaffController::class, 'getRoles']);
 
     Route::get('getUsersByRoleId/{roleId}', [StaffController::class, 'getUsersByRoleId']);
@@ -126,6 +142,22 @@ Route::middleware(['auth:sanctum', 'role:Teacher|SuperAdmin'])->prefix('teacher'
     Route::delete('deleteSelfTest/{selfTestId}', [StaffController::class, 'deleteSelfTest']);
 
     Route::delete('deleteSelfTestQuestion/{selfTestQuestionId}', [StaffController::class, 'deleteSelfTestQuestion']);
+
+    Route::post('addFinalTest', [StaffController::class, 'addFinalTest']);
+
+    Route::post('addFinalTestQuestion', [StaffController::class, 'addFinalTestQuestion']);
+
+    Route::post('editFinalTest', [StaffController::class, 'editFinalTest']);
+
+    Route::post('editFinalTestQuestion', [StaffController::class, 'editFinalTestQuestion']);
+
+    Route::delete('deleteFinalTest/{finalTestId}', [StaffController::class, 'deleteFinalTest']);
+
+    Route::delete('deleteFinalTestQuestion/{finalTestId}', [StaffController::class, 'deleteFinalTestQuestion']);
+
+    Route::get('viewFinalTestQuestions/{testId}', [StaffController::class, 'viewFinalTestQuestions']);
+
+    Route::get('viewFinalTestQuestion/{questionId}', [StaffController::class, 'viewFinalTestQuestion']);
 
     Route::post('editComplaint/{complaint}', [ComplaintController::class, 'editComplaint']);
 
@@ -217,6 +249,12 @@ Route::middleware(['auth:sanctum', 'role:Student|SuperAdmin'])->prefix('student'
 
     Route::post("submitSelfTestAnswer", [StudentController::class, "submitSelfTestAnswer"]);
 
+    Route::get("getFinalTestQuestion/{testId}", [StudentController::class,"getFinalTestQuestion"]);
+
+    Route::get("getAllFinalTestQuestions/{testId}", [StudentController::class,"getAllFinalTestQuestions"]);
+
+    Route::post("submitFinalTestAnswer", [StudentController::class,"submitFinalTestAnswer"]);
+
     Route::get("viewAllFlashCards", [StudentController::class, "viewAllFlashCards"]);
 
     Route::get("viewFlashCard/{flashcardId}", [StudentController::class, "viewFlashCard"]);
@@ -255,6 +293,12 @@ Route::middleware(['auth:sanctum', 'role:Guest|Student'])->prefix('guest-student
     Route::delete('deleteIndividualRequest/{id}', [IndividualCourseRequestController::class, 'deleteIndividualRequest']);
 
     Route::post('updateIndividualRequest/{id}', [IndividualCourseRequestController::class, 'updateIndividualRequest']);
+
+    Route::get("getAllPTQuestions", [StudentController::class, "getAllPTQuestions"]);
+
+    Route::get("getPTQuestion", [StudentController::class, "getPTQuestion"]);
+
+    Route::post("submitPTAnswer", [StudentController::class, "submitPTAnswer"]);
 });
 
 Route::middleware(['auth:sanctum', 'role:Teacher|Student'])->prefix('teacher-student')->group(function () {

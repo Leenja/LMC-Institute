@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\CourseSchedule;
 use App\Models\Enrollment;
 use App\Models\FlashCard;
 use App\Models\Lesson;
@@ -10,9 +11,11 @@ use App\Models\Notes;
 use App\Models\SelfTest;
 use App\Models\SelfTestProgress;
 use App\Models\SelfTestQuestion;
+use App\Models\Test;
 use App\Models\User;
 use App\Repositories\StudentRepository;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class StudentService
 {
@@ -51,34 +54,6 @@ class StudentService
             ->get();
     }
 
-    //View available courses
-    /*public function getAvailableCourses()
-    {
-        $currentDate = Carbon::today();
-
-        $courses = Course::with(['CourseSchedule', 'User'])
-            ->where('Status', 'Unactive')
-            ->whereHas('CourseSchedule', function ($query) use ($currentDate) {
-                $query->where('Start_Date', '>=', $currentDate)
-                    ->where('End_Enroll', '>=', $currentDate);
-            })
-            ->get()
-            ->map(function ($course) {
-                return [
-                    'id' => $course->id,
-                    'TeacherName' => $course->User->name ?? null,
-                    'LanguageId' => $course->LanguageId,
-                    'Description' => $course->Description,
-                    'Photo' => $course->Photo,
-                    'Status' => $course->Status,
-                    'Level' => $course->Level,
-                    'course_schedule' => $course->CourseSchedule,
-                ];
-            });
-
-        return $courses;
-    }*/
-
     public function getAvailableCourses()
     {
         $currentDate = Carbon::today();
@@ -91,7 +66,7 @@ class StudentService
             })
             ->get()
             ->map(function ($course) {
-                $schedule = $course->CourseSchedule->first(); // استخدم أول جدول فقط
+                $schedule = $course->CourseSchedule->first();
 
                 return [
                     'id' => $course->id,
@@ -115,8 +90,6 @@ class StudentService
 
         return $courses;
     }
-
-
 
     public function getTeacher($teacherId)
     {
@@ -162,8 +135,6 @@ class StudentService
         return $this->studentRepository->getNextSelfTestQuestion($selfTestId, $nextQuestion);
     }
 
-    //lana
-
     public function getSelfTest_ALL_Questions($studentId, $selfTestId)
     {
         $selfTest = $this->studentRepository->findWithLessonAndCourse($selfTestId);
@@ -206,7 +177,6 @@ class StudentService
         ];
     }
 
-
     public function getSelfTestsByLesson($lessonId)
     {
         $selfTests = $this->studentRepository->getByLessonWithQuestions($lessonId);
@@ -234,8 +204,45 @@ class StudentService
         return $selfTests;
     }
 
+        //Get final test questions
+    public function getNextFinalTestQuestion($studentId, $testId)
+    {
+        return DB::transaction(function () use ($studentId, $testId) {
+            // Check if course has ended
+            $test = Test::with('Course')->findOrFail($testId);
 
+            $courseSchedule = CourseSchedule::where('CourseId', $test->CourseId)->first();
 
+            if (!$courseSchedule || $courseSchedule->End_Date > now()->toDateString()) {
+                return ['error' => 'You cannot take this test until the course is finished.'];
+            }
+            return $this->studentRepository->fetchNextFinalTestQuestion($studentId, $testId);
+        });
+    }
+
+    //Answer final test questions
+    public function submitFinalTestAnswer($studentId, $data)
+    {
+        return DB::transaction(function () use ($studentId, $data) {
+            $test = Test::with('Course')->findOrFail($data['TestId']);
+
+            $courseSchedule = CourseSchedule::where('CourseId', $test->CourseId)->first();
+
+            if (!$courseSchedule || $courseSchedule->End_Date > now()->toDateString()) {
+                throw new \Exception('You cannot submit answers until the course is finished.');
+            }
+
+            return $this->studentRepository->handleFinalTestAnswerSubmission($studentId, $data);
+        });
+    }
+
+    //Get all final test answers
+    public function getAllFinalTestQuestions($studentId, $testId)
+    {
+        return DB::transaction(function () use ($studentId, $testId) {
+            return $this->studentRepository->fetchAllFinalTestQuestions($studentId, $testId);
+        });
+    }
 
     //View flash cards
     public function getAllFlashCards($studentId)

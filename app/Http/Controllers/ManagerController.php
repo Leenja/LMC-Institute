@@ -2,19 +2,263 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessPlacementFile;
 use App\Models\LMCInfo;
+use App\Models\PlacementTestAnswer;
+use App\Models\PlacementTestQuestion;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ManagerController extends Controller
 {
-    public function editEmployee(Request $request) {
+    public function uploadQuestions(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:pdf,jpg,jpeg,png',
+        ]);
 
+        $file = $request->file('file');
+        $fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+        $destinationPath = storage_path('app/placement');
+
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0777, true);
+            Log::info("Created placement directory at: $destinationPath");
+        }
+
+        if ($file->move($destinationPath, $fileName)) {
+            Log::info("File moved successfully to: placement/$fileName");
+
+            ProcessPlacementFile::dispatchSync('placement/' . $fileName);
+
+            return response()->json(['message' => 'File received and will be processed'], 200);
+        } else {
+            Log::error("Failed to move uploaded file to: " . $destinationPath . DIRECTORY_SEPARATOR . $fileName);
+            return response()->json(['message' => 'File upload failed'], 500);
+        }
     }
 
-    public function deleteEmployee() {
+    public function markCorrectAnswer($answerId)
+    {
+        $answer = PlacementTestAnswer::find($answerId);
 
+        if (!$answer) {
+            return response()->json(['message' => 'Answer not found'], 404);
+        }
+
+        $questionId = $answer->QuestionId;
+
+        DB::beginTransaction();
+        try {
+            if ($answer->isCorrect) {
+                $answer->update(['isCorrect' => false]);
+
+                DB::commit();
+                return response()->json(['message' => 'Correct answer unmarked'], 200);
+            } else {
+                PlacementTestAnswer::where('QuestionId', $questionId)
+                    ->update(['isCorrect' => false]);
+
+                $answer->update(['isCorrect' => true]);
+
+                DB::commit();
+                return response()->json(['message' => 'Answer marked as correct'], 200);
+            }
+        } catch (Exception $e) {
+            DB::rollback();
+            return response()->json(['message' => 'Failed to toggle correct answer'], 500);
+        }
+    }
+
+    public function addOrUpdatePTMedia(Request $request, $id)
+    {
+        $request->validate([
+            'Media' => 'required|file|mimetypes:video/mp4,audio/mp4,audio/mpeg,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,image/jpeg,image/png|max:10240',
+        ]);
+
+        $question = PlacementTestQuestion::find($id);
+
+        if (!$question) {
+            return response()->json(['message' => 'Question not found'], 404);
+        }
+
+        try {
+            $media = $request->file('Media');
+            $fileName = time() . '_' . $media->getClientOriginalName(); // بدون أي فلترة
+
+            $media->move(public_path('storage/PTMedia'), $fileName);
+
+            if (!file_exists(public_path('storage/PTMedia/' . $fileName))) {
+                throw new Exception('Failed to upload media');
+            }
+
+            $mediaUrl = url('storage/PTMedia/' . $fileName);
+
+            $question->update([
+                'Media' => $mediaUrl,
+            ]);
+
+            return response()->json([
+                'message' => 'Media uploaded and linked to the question successfully',
+                'media_url' => $mediaUrl
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Failed to upload media',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getPTQuestionsWithAnswers()
+    {
+        $questions = PlacementTestQuestion::with('answers')->get();
+
+        return response()->json($questions);
+    }
+
+    public function getPTQuestion($id)
+    {
+        $question = PlacementTestQuestion::with('answers')->find($id);
+
+        if (!$question) {
+            return response()->json(['message' => 'Question not found'], 404);
+        }
+
+        return response()->json($question, 200);
+    }
+
+    public function addPlacementTestQuestion(Request $request)
+    {
+        $validated = $request->validate([
+            'Section' => 'required|in:Listening,Reading,LanguageUse',
+            'Context' => 'nullable|string',
+            'QuestionText' => 'required|string',
+            'Answers' => 'required|array|size:4',
+            'Answers.*.AnswerText' => 'required|string',
+            'Answers.*.isCorrect' => 'required|boolean',
+            'Media' => 'nullable|file|mimetypes:video/mp4,audio/mp4,audio/mpeg,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,image/jpeg,image/png|max:10240',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $mediaUrl = null;
+
+            if ($request->hasFile('Media')) {
+                $media = $request->file('Media');
+                $new_name = time() . '_' . $media->getClientOriginalName();
+                $media->move(public_path('storage/PTMedia'), $new_name);
+
+                if (!file_exists(public_path('storage/PTMedia/' . $new_name))) {
+                    throw new Exception('Failed to upload media', 500);
+                }
+
+                $mediaUrl = url('storage/PTMedia/' . $new_name);
+            }
+
+            $question = PlacementTestQuestion::create([
+                'Section' => $validated['Section'],
+                'Context' => $validated['Context'] ?? null,
+                'QuestionText' => $validated['QuestionText'],
+                'Media' => $mediaUrl,
+            ]);
+
+            foreach ($validated['Answers'] as $answerData) {
+                $question->answers()->create([
+                    'AnswerText' => $answerData['AnswerText'],
+                    'isCorrect' => $answerData['isCorrect'],
+                ]);
+            }
+            DB::commit();
+            return response()->json(['message' => 'Question and answers added successfully'], 201);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return response()->json(['message' => 'Failed to add question', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function editPlacementTestQuestion(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'Section' => 'sometimes|in:Listening,Reading,LanguageUse',
+            'Context' => 'sometimes|nullable|string',
+            'QuestionText' => 'sometimes|string',
+            'Answers' => 'sometimes|array|size:4',
+            'Answers.*.AnswerText' => 'required_with:Answers|string',
+            'Answers.*.isCorrect' => 'required_with:Answers|boolean',
+            'Media' => 'nullable|file|mimetypes:video/mp4,audio/mp4,audio/mpeg,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,image/jpeg,image/png|max:10240',
+        ]);
+
+        $question = PlacementTestQuestion::with('answers')->find($id);
+
+        if (!$question) {
+            return response()->json(['message' => 'Question not found'], 404);
+        }
+
+        DB::beginTransaction();
+        try {
+            $updateData = array_filter([
+                'Section' => $validated['Section'] ?? null,
+                'Context' => $validated['Context'] ?? null,
+                'QuestionText' => $validated['QuestionText'] ?? null,
+            ], fn($v) => !is_null($v));
+
+            if ($request->hasFile('Media')) {
+                $media = $request->file('Media');
+                $new_name = time() . '_' . $media->getClientOriginalName();
+                $media->move(public_path('storage/PTMedia'), $new_name);
+
+                if (!file_exists(public_path('storage/PTMedia/' . $new_name))) {
+                    throw new Exception('Failed to upload media', 500);
+                }
+
+                $mediaUrl = url('storage/PTMedia/' . $new_name);
+                $updateData['Media'] = $mediaUrl;
+            }
+
+            $question->update($updateData);
+
+            if (isset($validated['Answers'])) {
+                $question->answers()->delete();
+
+                foreach ($validated['Answers'] as $answerData) {
+                    $question->answers()->create([
+                        'AnswerText' => $answerData['AnswerText'],
+                        'isCorrect' => $answerData['isCorrect'],
+                    ]);
+                }
+            }
+            DB::commit();
+            return response()->json(['message' => 'Question updated successfully'], 200);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'message' => 'Failed to update question',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deletePlacementTestQuestion($id)
+    {
+        $question = PlacementTestQuestion::find($id);
+
+        if (!$question) {
+            return response()->json(['message' => 'Question not found'], 404);
+        }
+
+        try {
+            $question->delete();
+            return response()->json(['message' => 'Question deleted successfully'], 200);
+        } catch (Exception $e) {
+            return response()->json(['message' => 'Failed to delete question'], 500);
+        }
     }
 
     public function editLMCInfo(Request $request)

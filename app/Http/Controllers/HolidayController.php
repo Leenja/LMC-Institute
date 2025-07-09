@@ -14,8 +14,6 @@ use App\Models\Holiday;
 use App\Models\ScheduleEnrollmentBackup;
 
 
-
-
 class HolidayController extends Controller
 {
     public function addHoliday(Request $request)

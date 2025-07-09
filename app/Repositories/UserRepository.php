@@ -4,12 +4,8 @@ namespace App\Repositories;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-//use Tymon\JWTAuth\Facades\JWTAuth;
-use Spatie\Permission\Models\Role;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Auth;
-
 
 class UserRepository
 {
@@ -46,11 +42,11 @@ class UserRepository
     public function attemptLogin(array $credentials)
     {
         $user = User::where('email', $credentials['email'])->first();
-    
+
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return false;
         }
-    
+
         return $user->createToken('API Token')->plainTextToken;
     }
 

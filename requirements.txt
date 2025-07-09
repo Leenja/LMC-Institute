@@ -1,0 +1,3 @@
+pytesseract
+pdfplumber
+Pillow

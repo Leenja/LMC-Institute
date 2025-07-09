@@ -94,7 +94,6 @@ class LibraryService
         } catch (Exception $e) {
             DB::rollBack();
 
-            // حذف الملف إذا تم رفعه ثم حدث خطأ
             if (isset($fullPath) && file_exists($fullPath)) {
                 unlink($fullPath);
             }
@@ -123,14 +122,11 @@ class LibraryService
             return 'not_found';
         }
 
-        // جلب كل العناصر المرتبطة بالمكتبة
         $items = Item::where('LibraryId', $library->id)->get();
 
-        // مسار المجلد الذي يحتوي ملفات المكتبة
         $folderPath = public_path("storage/library_files/{$library->id}");
 
         if ($items->isEmpty()) {
-            // حذف مجلد الملفات إذا وجد
             if (file_exists($folderPath)) {
                 $this->deleteDirectoryRecursively($folderPath);
             }
@@ -139,7 +135,6 @@ class LibraryService
             return 'no_items';
         }
 
-        // حذف كل الملفات الخاصة بالعناصر أولاً
         foreach ($items as $item) {
             if ($item->File) {
                 $fileFullPath = public_path('storage/' . $item->File);
@@ -150,7 +145,6 @@ class LibraryService
             $item->delete();
         }
 
-        // حذف مجلد الملفات الخاص بالمكتبة إن وجد
         if (file_exists($folderPath)) {
             $this->deleteDirectoryRecursively($folderPath);
         }
@@ -160,9 +154,6 @@ class LibraryService
         return 'deleted';
     }
 
-    /**
-     * دالة مساعدة لحذف مجلد وكل محتوياته بشكل متكرر (Recursively)
-     */
     private function deleteDirectoryRecursively($dir)
     {
         if (!is_dir($dir)) {
@@ -207,13 +198,11 @@ class LibraryService
             $fullPath = null;
 
             if ($hasNewFile) {
-                // حذف الملف القديم إن وجد
                 $oldFilePath = public_path('storage/' . $item->File);
                 if (file_exists($oldFilePath)) {
                     unlink($oldFilePath);
                 }
 
-                // رفع الملف الجديد
                 $newName = time() . '_' . $file->getClientOriginalName();
                 $destinationPath = public_path('storage/library_files/' . $item->LibraryId);
 
@@ -248,7 +237,6 @@ class LibraryService
         } catch (Exception $e) {
             DB::rollBack();
 
-            // حذف الملف الجديد إذا تم رفعه ثم حدث خطأ
             if (isset($fullPath) && file_exists($fullPath)) {
                 unlink($fullPath);
             }
@@ -266,14 +254,12 @@ class LibraryService
             throw new \Exception('File not found', 404);
         }
 
-        // حدد المسار الكامل إلى الملف في مجلد public
         $fullPath = public_path('storage/' . $item->File);
 
         if (file_exists($fullPath)) {
-            unlink($fullPath); // حذف الملف فعليًا
+            unlink($fullPath);
         }
 
-        // حذف السجل من قاعدة البيانات
         $this->repository->deleteItem($item);
     }
 
@@ -286,8 +272,7 @@ class LibraryService
             return response()->json(['message' => 'Item not found'], 404);
         }
 
-        // الملف محفوظ داخل public/storage/library_files/... كما هو واضح في uploadFile
-        $relativePath = 'storage/' . $item->File; // نضيف "storage/" لأنها داخل مجلد public
+        $relativePath = 'storage/' . $item->File;
         $fullPath = public_path($relativePath);
 
         if (!file_exists($fullPath)) {

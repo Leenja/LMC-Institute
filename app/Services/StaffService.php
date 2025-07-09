@@ -30,8 +30,6 @@ class StaffService
         $this->roleRepository = $roleRepository;
     }
 
-    //lana
-
     public function getAllRoles()
     {
         return $this->roleRepository->getAllRoles();
@@ -104,7 +102,6 @@ class StaffService
         ];
     }
 
-    //new
     public function getAllEmployees(?string $filter = 'active')
     {
         $roles = ['Teacher', 'Secretarya', 'Logistic'];
@@ -119,7 +116,6 @@ class StaffService
 
     public function restoreEmployee($userId)
     {
-        // جلب المستخدم مع المحذوفين (soft deleted)
         $user = User::withTrashed()->find($userId);
 
         if (!$user) {
@@ -130,21 +126,14 @@ class StaffService
             throw new \Exception('User is not deleted.', 400);
         }
 
-        // استرجاع المستخدم
         $user->restore();
 
-        // استرجاع بيانات staff_infos المرتبطة (إذا تستخدم soft deletes)
         DB::table('staff_infos')
             ->where('UserId', $userId)
             ->update(['deleted_at' => null]);
 
-        // لا نعيد response هنا، فقط بيانات أو true إذا تريد
         return true;
     }
-
-
-
-    //end lana
 
     //Secretary--------------------------------------------------
 
@@ -221,10 +210,6 @@ class StaffService
     }
 
     //Add course
-
-    //Add course
-    //lana
-
     public function createCourseWithSchedule($data)
     {
         return DB::transaction(function () use ($data) {
@@ -284,11 +269,7 @@ class StaffService
                 'End_Time' => $data['End_Time'],
                 'CourseDays' => $data['CourseDays'],
             ]);*/
-            //lana
 
-
-
-            // جلب العطل//lana
             //  $holidays = Holiday::pluck('date')->map(fn($d) => Carbon::parse($d)->toDateString())->toArray();
             $holidays = Holiday::all()->flatMap(function ($holiday) {
                 $start = Carbon::parse($holiday->StartDate);
@@ -307,13 +288,11 @@ class StaffService
                 $data['End_Time'],
                 $data['Number_of_lessons'],
                 $data['CourseDays'],
-                //lana
                 $holidays
             );
 
             Lesson::insert($lessons);
 
-            // 4) نحسب Start/End بناءً على أول وآخر درس فعلي
             $firstLessonDate = Carbon::parse($lessons[0]['Date'])->setTimeFromTimeString($data['Start_Time']);
             $lastLessonDate  = Carbon::parse(end($lessons)['Date'])->setTimeFromTimeString($data['End_Time']);
 
@@ -332,9 +311,8 @@ class StaffService
                 $course->id,
                 $data['Start_Enroll'],
                 $data['End_Enroll'],
-                //lana
                 $holidays,
-                $data['Start_Date'], // أضف هذا الباراميتر الجديد
+                $data['Start_Date'],
             );
 
             DB::table('enrollment_days')->insert($enrollmentDays);
@@ -356,7 +334,6 @@ class StaffService
         while ($count < $lessonCount) {
             if (
                 in_array($date->format('D'), $daysOfWeek)
-                //lana
                 &&
                 !in_array($date->toDateString(), $holidays)
             ) {
@@ -377,28 +354,6 @@ class StaffService
         return $lessons;
     }
 
-    /* private function generateEnrollmentDays($courseId, $startEnroll, $endEnroll,/*lana*/ /*$holidays)
-      {
-        $days = [];
-        $date = Carbon::parse($startEnroll);
-        $end = Carbon::parse($endEnroll);
-
-        while ($date->lte($end)) {
-            //lana
-            if (!in_array($date->toDateString(), $holidays)) {
-                $days[] = [
-                    'CourseId' => $courseId,
-                    'Enroll_Date' => $date->format('Y-m-d'),
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
-            }
-            $date->addDay();
-        }
-
-        return $days;
-    }*/
-
     private function generateEnrollmentDays($courseId, $startEnroll, $endEnroll, $holidays, $courseStartDate)
     {
         $days = [];
@@ -407,11 +362,10 @@ class StaffService
         $end = Carbon::parse($endEnroll);
         $startCourse = Carbon::parse($courseStartDate);
 
-        $requiredCount = $date->diffInDays($end) + 1; // ← عدد الأيام الأصلية بين البداية والنهاية (شاملة العطل)
+        $requiredCount = $date->diffInDays($end) + 1;
 
         $validDates = [];
 
-        // اجمع الأيام الصالحة (غير العطل) داخل الفترة الأصلية
         $tempDate = $date->copy();
         while ($tempDate->lte($end)) {
             if (!in_array($tempDate->toDateString(), $holidays)) {
@@ -420,7 +374,6 @@ class StaffService
             $tempDate->addDay();
         }
 
-        // أضف الأيام الصالحة إلى القائمة
         foreach ($validDates as $validDate) {
             $days[] = [
                 'CourseId' => $courseId,
@@ -430,10 +383,8 @@ class StaffService
             ];
         }
 
-        // كم تبقى لإكمال العدد المطلوب؟
         $missingCount = $requiredCount - count($days);
 
-        // عوّض الأيام المفقودة بعد End_Enroll إلى ما قبل StartCourse
         $extraDate = $end->copy()->addDay();
         while ($missingCount > 0 && $extraDate->lt($startCourse)) {
             if (!in_array($extraDate->toDateString(), $holidays)) {
@@ -450,9 +401,6 @@ class StaffService
 
         return $days;
     }
-
-
-
 
     //Edit course
     public function editCourse($data)
@@ -515,9 +463,6 @@ class StaffService
                 'CourseDays' => $data['CourseDays'],
             ]);*/
 
-
-
-            // جلب العطل//lana
             // $holidays = Holiday::pluck('date')->map(fn($d) => Carbon::parse($d)->toDateString())->toArray();
             $holidays = Holiday::all()->flatMap(function ($holiday) {
                 $start = Carbon::parse($holiday->StartDate);
@@ -540,7 +485,6 @@ class StaffService
                 $data['End_Time'],
                 $data['Number_of_lessons'],
                 $data['CourseDays'],
-                //lana
                 $holidays
             );
 
@@ -569,9 +513,8 @@ class StaffService
                 $data['CourseId'],
                 $data['Start_Enroll'],
                 $data['End_Enroll'],
-                //lana
                 $holidays,
-                $data['Start_Date'], // أضف هذا الباراميتر الجديد
+                $data['Start_Date'],
             );
             DB::table('enrollment_days')->insert($enrollmentDays);
 
@@ -663,7 +606,7 @@ class StaffService
     public function getScheduleByDate($date = null)
     {
         $teacherId = auth()->user()->id;
-        $targetDate = $date ?? now()->toDateString(); // إذا ما تم إرسال تاريخ، استخدم اليوم الحالي
+        $targetDate = $date ?? now()->toDateString();
 
         $lessons = $this->staffRepository->getScheduleByDay($teacherId, $targetDate);
 
@@ -784,45 +727,10 @@ class StaffService
         return ['success' => 'Bonus updated successfully'];
     }
 
-    /*public function markAttendance($lessonId, $studentId)
-    {
-        $teacherId = auth()->user()->id;
-
-        $lesson = Lesson::where('lessons.id', $lessonId)
-            ->join('courses', 'lessons.CourseId', '=', 'courses.id')
-            ->where('courses.TeacherId', $teacherId)
-            ->select('lessons.*')
-            ->first();
-
-        if (!$lesson) {
-            return ['error' => 'Lesson not found or not assigned to you'];
-        }
-
-        $isEnrolled = DB::table('enrollments')
-            ->where('CourseId', $lesson->CourseId)
-            ->where('StudentId', $studentId)
-            ->exists();
-
-        if (!$isEnrolled) {
-            return ['error' => 'Student is not enrolled in this course'];
-        }
-
-        Attendance::create([
-            'LessonId' => $lessonId,
-            'StudentId' => $studentId,
-            'Bonus' => 0,
-        ]);
-
-        $this->staffRepository->updateStudentProgress($studentId, $lesson->CourseId);
-
-        return ['success' => 'Attendance record created'];
-    }*/
-
     public function markAttendance($lessonId, $studentId)
     {
-        $teacherId = auth()->id(); // المعلّم الحالي
+        $teacherId = auth()->id();
 
-        // ➊ التأكّد أنّ الدرس يتبع هذا المعلّم
         $lesson = Lesson::where('lessons.id', $lessonId)
             ->join('courses', 'lessons.CourseId', '=', 'courses.id')
             ->where('courses.TeacherId', $teacherId)
@@ -833,13 +741,11 @@ class StaffService
             return ['error' => 'Lesson not found or not assigned to you'];
         }
 
-        // ✅ ➋ التحقّق من أن التاريخ الحالي >= تاريخ الدرس
         $today = now()->toDateString();
         if ($today < $lesson->Date) {
             return ['error' => 'You cannot mark attendance before the lesson date'];
         }
 
-        // ➌ التحقق من أن الطالب مسجَّل بالكورس
         $isEnrolled = DB::table('enrollments')
             ->where('CourseId', $lesson->CourseId)
             ->where('StudentId', $studentId)
@@ -858,20 +764,17 @@ class StaffService
             return ['error' => 'Student is not enrolled in this course'];
         }
 
-        // ➍ التحقق من وجود سجل حضور
         $attendance = Attendance::where('LessonId', $lessonId)
             ->where('StudentId', $studentId)
             ->first();
 
         if ($attendance) {
-            // الطالب حاضر بالفعل → حذف الحضور
             $attendance->delete();
             $this->staffRepository->updateStudentProgress($studentId, $lesson->CourseId);
 
             return ['success' => 'Attendance record deleted successfully for this lesson'];
         }
 
-        // لا يوجد حضور سابق → إنشاء سجل جديد
         Attendance::create([
             'LessonId'  => $lessonId,
             'StudentId' => $studentId,
@@ -940,5 +843,61 @@ class StaffService
         $question->delete();
 
         return true;
+    }
+
+        public function addFinalTest($data, $teacherId)
+    {
+        return DB::transaction(function () use ($data, $teacherId) {
+            return $this->staffRepository->createFinalTest($data, $teacherId);
+        });
+    }
+
+    public function editFinalTest($data, $teacherId)
+    {
+        return DB::transaction(function () use ($data, $teacherId) {
+            return $this->staffRepository->updateFinalTest($data, $teacherId);
+        });
+    }
+
+    public function deleteFinalTest($id, $teacherId)
+    {
+        return DB::transaction(function () use ($id, $teacherId) {
+            $this->staffRepository->deleteFinalTest($id, $teacherId);
+        });
+    }
+
+    public function addFinalTestQuestion($data, $mediaFile, $teacherId)
+    {
+        return DB::transaction(function () use ($data, $mediaFile, $teacherId) {
+            return $this->staffRepository->createFinalTestQuestion($data, $mediaFile, $teacherId);
+        });
+    }
+
+    public function editFinalTestQuestion($data, $mediaFile, $teacherId)
+    {
+        return DB::transaction(function () use ($data, $mediaFile, $teacherId) {
+            return $this->staffRepository->updateFinalTestQuestion($data, $mediaFile, $teacherId);
+        });
+    }
+
+    public function deleteFinalTestQuestion($id, $teacherId)
+    {
+        return DB::transaction(function () use ($id, $teacherId) {
+            $this->staffRepository->deleteFinalTestQuestion($id, $teacherId);
+        });
+    }
+
+    public function getFinalTestQuestions($testId, $teacherId)
+    {
+        return DB::transaction(function () use ($testId, $teacherId) {
+            return $this->staffRepository->getFinalTestQuestions($testId, $teacherId);
+        });
+    }
+
+    public function getFinalTestQuestion($questionId, $teacherId)
+    {
+        return DB::transaction(function () use ($questionId, $teacherId) {
+            return $this->staffRepository->getFinalTestQuestion($questionId, $teacherId);
+        });
     }
 }

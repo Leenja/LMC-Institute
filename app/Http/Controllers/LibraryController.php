@@ -149,18 +149,9 @@ class LibraryController extends Controller
         return $this->service->downloadFile($id);
     }
 
-    /*public function getLibraryByLanguage($languageId)
-    {
-        $library = Library::where('LanguageId', $languageId)->first();
-        if (!$library) {
-            return response()->json(['message' => 'Library not found'], 404);
-        }
-        return response()->json($library);
-    }*/
-
     public function getLibraryByLanguage($languageId)
     {
-        $library = Library::with('language') // تحميل علاقة اللغة
+        $library = Library::with('language')
             ->where('LanguageId', $languageId)
             ->first();
 

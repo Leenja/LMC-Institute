@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Enrollment;
 use App\Models\Language;
 use App\Models\LMCInfo;
-use App\Models\SelfTest;
+use App\Models\PlacementTest;
+use App\Models\PlacementTestAnswer;
+use App\Models\PlacementTestProgress;
+use App\Models\PlacementTestQuestion;
 use App\Models\SelfTestProgress;
 use App\Models\SelfTestQuestion;
 use App\Models\User;
@@ -197,6 +199,242 @@ class StudentController extends Controller
             'correctAnswer' => $isCorrect ? null : $question->CorrectAnswer,
             'nextAvailable' => true
         ], fn($value) => !is_null($value)));
+    }
+
+        public function getFinalTestQuestion($testId)
+    {
+        $studentId = auth()->id();
+
+        $question = $this->studentService->getNextFinalTestQuestion($studentId, $testId);
+
+        if (isset($question['error'])) {
+            return response()->json(['message' => $question['error']], 403);
+        }
+
+        return response()->json([
+            'message' => 'Final test question retrieved successfully.',
+            'question' => $question,
+        ]);
+    }
+
+    public function submitFinalTestAnswer(Request $request)
+    {
+        $studentId = auth()->id();
+
+        $request->validate([
+            'TestId' => 'required|exists:tests,id',
+            'QuestionId' => 'required|exists:test_questions,id',
+            'Answer' => 'required|string',
+        ]);
+
+        $result = $this->studentService->submitFinalTestAnswer($studentId, $request->all());
+
+        return response()->json($result);
+    }
+
+    public function getAllFinalTestQuestions($testId)
+    {
+        $studentId = auth()->id();
+
+        $questions = $this->studentService->getAllFinalTestQuestions($studentId, $testId);
+
+        return response()->json([
+            'message' => 'All final test questions retrieved successfully.',
+            'questions' => $questions,
+        ]);
+    }
+
+    public function getAllPTQuestions()
+    {
+        $questions = PlacementTestQuestion::with(['answers' => function ($query) {
+            $query->select('id', 'QuestionId', 'AnswerText');
+        }])
+        ->select('id', 'Section', 'Context','Media', 'QuestionText')->get();
+
+        return response()->json([
+            'Questions' => $questions
+        ]);
+    }
+
+    public function getPTQuestion(){
+        $userId = auth()->id();
+
+        $test = PlacementTest::where('GuestId', $userId)
+                            ->latest()
+                            ->first();
+
+        if ($test && $test->Status === 'Completed') {
+            return response()->json([
+                'message' => 'Test Completed',
+                'Level' => $test->Level,
+                'TotalScore' => $test->TotalScore,
+                'AudioScore' => $test->AudioScore,
+                'ReadingScore' => $test->ReadingScore,
+                'SpeakingScore' => $test->SpeakingScore,
+            ]);
+        }
+
+        if (!$test) {
+            $test = PlacementTest::create([
+                'GuestId' => $userId,
+                'LanguageId' => 1,
+                'Level' => 'Not Set',
+                'AudioScore' => 0,
+                'ReadingScore' => 0,
+                'SpeakingScore' => 0,
+                'TotalScore' => 0,
+            ]);
+        }
+
+        $progress = PlacementTestProgress::where('PlacementTestId', $test->id)
+                                        ->orderByDesc('QuestionId')
+                                        ->first();
+
+        $nextQuestion = PlacementTestQuestion::with('answers')
+            ->when($progress, fn($q) => $q->where('id', '>', $progress->QuestionId))
+            ->orderBy('id')
+            ->first();
+
+        if (!$nextQuestion) {
+            $test->update([
+                'Status' => 'Completed',
+                'Level' => $this->determineLevel($test->TotalScore),
+            ]);
+
+            return response()->json([
+                'message' => 'Test Completed',
+                'Level' => $test->Level,
+                'TotalScore' => $test->TotalScore,
+                'AudioScore' => $test->AudioScore,
+                'ReadingScore' => $test->ReadingScore,
+                'SpeakingScore' => $test->SpeakingScore,
+            ]);
+        }
+
+        return response()->json([
+            'Question' => [
+                'id' => $nextQuestion->id,
+                'Section' => $nextQuestion->Section,
+                'Context' => $nextQuestion->Context,
+                'Media' => $nextQuestion->Media,
+                'QuestionText' => $nextQuestion->QuestionText,
+                'Answers' => $nextQuestion->answers->map(fn($a) => [
+                    'id' => $a->id,
+                    'AnswerText' => $a->AnswerText,
+                ]),
+            ]
+        ]);
+    }
+
+    public function submitPTAnswer(Request $request)
+    {
+        $userId = auth()->id();
+
+        $request->validate([
+            'QuestionId' => 'required|exists:placement_test_questions,id',
+            'SelectedAnswerId' => 'required|exists:placement_test_answers,id',
+        ]);
+
+        $test = PlacementTest::where('GuestId', $userId)
+                            ->where('Status', 'Pending')
+                            ->latest()->first();
+
+        if (!$test) {
+            return response()->json(['message' => 'You already completed the test.'], 400);
+        }
+
+        $question = PlacementTestQuestion::find($request->QuestionId);
+        $answer = PlacementTestAnswer::find($request->SelectedAnswerId);
+
+        if ($answer->QuestionId != $question->id) {
+            return response()->json(['message' => 'Answer does not belong to the question.'], 400);
+        }
+
+        $alreadyAnswered = PlacementTestProgress::where('PlacementTestId', $test->id)
+            ->where('QuestionId', $question->id)
+            ->exists();
+
+        if ($alreadyAnswered) {
+            return response()->json(['message' => 'You already answered this question.'], 409);
+        }
+
+        PlacementTestProgress::create([
+            'PlacementTestId' => $test->id,
+            'QuestionId' => $question->id,
+            'SelectedAnswerId' => $answer->id,
+        ]);
+
+        if ($answer->isCorrect) {
+            $test->increment('TotalScore');
+
+            $scoreColumn = match ($question->Section) {
+                'Listening' => 'AudioScore',
+                'Reading' => 'ReadingScore',
+                'LanguageUse' => 'SpeakingScore',
+                default => null,
+            };
+
+            if ($scoreColumn) {
+                $test->increment($scoreColumn);
+            }
+        }
+
+        $sectionQuestionIds = PlacementTestQuestion::where('Section', $question->Section)->pluck('id')->toArray();
+        $isLastInSection = $question->id === max($sectionQuestionIds);
+
+        if ($isLastInSection) {
+            $correctCount = PlacementTestAnswer::whereIn('QuestionId', $sectionQuestionIds)
+                ->where('isCorrect', true)
+                ->whereIn('id', function ($query) use ($test) {
+                    $query->select('SelectedAnswerId')
+                        ->from('placement_test_progress')
+                        ->where('PlacementTestId', $test->id);
+                })
+                ->count();
+
+            $scoreColumn = match ($question->Section) {
+                'Listening' => 'AudioScore',
+                'Reading' => 'ReadingScore',
+                'LanguageUse' => 'SpeakingScore',
+                default => null,
+            };
+
+            if ($scoreColumn) {
+                $test->update([$scoreColumn => $correctCount]);
+            }
+
+            if ($question->Section === 'LanguageUse') {
+                $totalScore = $test->TotalScore;
+                $level = $this->determineLevel($totalScore);
+                $test->update([
+                    'Status' => 'Completed',
+                    'Level' => $level,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => $answer->isCorrect ? 'Correct' : 'Incorrect',
+        ]);
+    }
+
+    private function determineLevel($score)
+    {
+        return match (true) {
+            $score <= 5 => 'A.1.1',
+            $score <= 10 => 'A.1.2',
+            $score <= 15 => 'A.2.1',
+            $score <= 20 => 'A.2.2',
+            $score <= 25 => 'B.1.1',
+            $score <= 30 => 'B.1.2',
+            $score <= 35 => 'B.2.1',
+            $score <= 40 => 'B.2.2',
+            $score <= 45 => 'C.1.1',
+            $score <= 50 => 'C.1.2',
+            $score <= 60 => 'C.2.1',
+            $score > 60 => 'C.2.2',
+            default => 'Not set',
+        };
     }
 
     public function addNote(Request $request)

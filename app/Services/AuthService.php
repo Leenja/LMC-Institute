@@ -6,11 +6,7 @@ use App\Models\StaffInfo;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Repositories\RoleRepository;
-//use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Auth;
-
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 
 class AuthService
@@ -59,7 +55,7 @@ class AuthService
     $token = $this->userRepository->attemptLogin($credentials);
 
     if (!$token) {
-        throw new \Exception('بيانات الدخول غير صحيحة', 401);
+        throw new \Exception('Invalid credintials', 401);
     }
 
     $user = User::where('email', $credentials['email'])->first();
@@ -82,7 +78,7 @@ class AuthService
     ];
 }
 
- 
+
   /*  public function login(array $credentials)
     {
         $token = $this->userRepository->attemptLogin($credentials);

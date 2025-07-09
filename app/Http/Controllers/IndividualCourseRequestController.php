@@ -31,7 +31,6 @@ class IndividualCourseRequestController extends Controller
 
     public function myRequestsForIndividualCourse(Request $request)
     {
-        // يعيد الطلبات الخاصة بالمستخدم الحالي فقط
         $requests = $this->service->getUserRequests($request->user());
 
         return response()->json($requests);

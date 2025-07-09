@@ -14,12 +14,9 @@ use Illuminate\Http\Request;
 use App\Services\StaffService;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Facades\URL;
-
 use App\Services\RoleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-
 use Spatie\Permission\Models\Role;
 
 class StaffController extends Controller
@@ -31,7 +28,6 @@ class StaffController extends Controller
         $this->staffService = $staffService;
     }
 
-    //lana
     public function getTeachers()
     {
         $teachers = User::role('Teacher')->with(['roles', 'staffInfo'])->get();
@@ -58,8 +54,6 @@ class StaffController extends Controller
             'data' => $data,
         ], 200);
     }
-
-    //1
 
     public function getGuestStudent(Request $request)
     {
@@ -244,26 +238,6 @@ class StaffController extends Controller
             ], (is_numeric($e->getCode()) && $e->getCode() >= 100 && $e->getCode() < 600) ? $e->getCode() : 500);
         }
     }
-
-    /* public function showAllEmployees()
-    {
-        // نحدد الـ IDs الخاصة بالأدوار المطلوبة (مثلاً: Teacher=2, Secretarya=3, Logistic=4)
-        // يجب استبدال هذه القيم بالأرقام الحقيقية الموجودة في جدول roles
-        $roleIds = Role::whereIn('name', ['Teacher', 'Secretarya', 'Logistic'])->pluck('id')->toArray();
-
-        $employees = User::withTrashed()
-            ->whereIn('role_id', $roleIds)
-            ->with([
-                'staffInfo' => function ($query) {
-                    $query->withTrashed();
-                }
-            ])
-            ->get();
-
-        return response()->json([
-            'employees' => $employees
-        ]);
-    }*/
 
     public function showAllEmployees(Request $request): JsonResponse
     {
@@ -826,6 +800,135 @@ class StaffController extends Controller
         try {
             $this->staffService->deleteSelfTestQuestion($id);
             return response()->json(['message' => 'Self test question deleted successfully'], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+        public function addFinalTest(Request $request)
+    {
+        $data = $request->validate([
+            'CourseId' => 'required|exists:courses,id',
+            'Title' => 'required|string|max:255',
+            'Duration' => 'required|numeric|min:1',
+            'Mark' => 'required|numeric|min:1',
+        ]);
+
+        $teacherId = auth()->user()->id;
+        $course = Course::find($data['CourseId']);
+
+        if (!$course || $course->TeacherId !== $teacherId) {
+            return response()->json(['message' => 'You are not authorized to create a final test for this course'], 403);
+        }
+
+        try {
+            $test = $this->staffService->addFinalTest($data, $teacherId);
+            return response()->json(['message' => 'Final test created successfully', 'test' => $test], 201);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function editFinalTest(Request $request)
+    {
+        $data = $request->validate([
+            'TestId' => 'required|exists:tests,id',
+            'Title' => 'sometimes|string|max:255',
+            'Duration' => 'sometimes|numeric|min:1',
+            'Mark' => 'sometimes|numeric|min:1',
+        ]);
+
+        $teacherId = auth()->user()->id;
+
+        try {
+            $test = $this->staffService->editFinalTest($data, $teacherId);
+            return response()->json(['message' => 'Final test updated successfully', 'test' => $test], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteFinalTest($id)
+    {
+        $teacherId = auth()->user()->id;
+        try {
+            $this->staffService->deleteFinalTest($id, $teacherId);
+            return response()->json(['message' => 'Final test deleted successfully'], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function addFinalTestQuestion(Request $request)
+    {
+        $data = $request->validate([
+            'TestId' => 'required|exists:tests,id',
+            'QuestionText' => 'required|string',
+            'Type' => 'required|in:MCQ,true_false,translate',
+            'Choices' => 'required_if:Type,MCQ|nullable|json',
+            'CorrectAnswer' => 'nullable|string',
+            'Point' => 'required|numeric|min:0.5',
+            'Media' => 'sometimes|file|mimes:mp4,jpeg,jpg,png,gif,webp,mp3,wav|max:10240',
+        ]);
+
+        $teacherId = auth()->user()->id;
+        try {
+            $question = $this->staffService->addFinalTestQuestion($data, $request->file('Media'), $teacherId);
+            return response()->json(['message' => 'Question added successfully', 'question' => $question], 201);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function editFinalTestQuestion(Request $request)
+    {
+        $data = $request->validate([
+            'TestQuestionId' => 'required|exists:test_questions,id',
+            'QuestionText' => 'sometimes|string',
+            'Type' => 'sometimes|in:MCQ,true_false,translate',
+            'Choices' => 'required_if:Type,MCQ|nullable|json',
+            'CorrectAnswer' => 'nullable|string',
+            'Point' => 'sometimes|numeric|min:0.5',
+            'Media' => 'sometimes|file|mimes:mp4,jpeg,jpg,png,gif,webp,mp3,wav|max:10240',
+        ]);
+
+        $teacherId = auth()->user()->id;
+        try {
+            $question = $this->staffService->editFinalTestQuestion($data, $request->file('Media'), $teacherId);
+            return response()->json(['message' => 'Test question updated successfully', 'question' => $question], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteFinalTestQuestion($id)
+    {
+        $teacherId = auth()->user()->id;
+        try {
+            $this->staffService->deleteFinalTestQuestion($id, $teacherId);
+            return response()->json(['message' => 'Test question deleted successfully'], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function viewFinalTestQuestions($testId)
+    {
+        $teacherId = auth()->user()->id;
+        try {
+            $questions = $this->staffService->getFinalTestQuestions($testId, $teacherId);
+            return response()->json(['questions' => $questions], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function viewFinalTestQuestion($questionId)
+    {
+        $teacherId = auth()->id();
+        try {
+            $question = $this->staffService->getFinalTestQuestion($questionId, $teacherId);
+            return response()->json(['question' => $question], 200);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

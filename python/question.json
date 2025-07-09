@@ -1,0 +1,8 @@
+{
+  "Questions": [
+    {
+      "QuestionText": "Sample Question and Anywer session for\nlearning an Interactive Game\n\n(Qi: How many players for stage 0?\n\nAL2\n\n02: Is stage 0 sequential or simultaneous?\n\nA2: sequential\n\n(QS: Which player acts at tis stage?\n\nAX\n\n‎What actions are available to Player 1 at stage 0?‏ :قي\n‎Ad: Action!‏\n\n‎(QS: If player 1 at stage 0 selections Action! does a\nsequential or simultaneous stage result?\n\n‎AS: sequential\n\n‎06: Which player acts at this stage?\n\n‎AG:2",
+      "answers": []
+    }
+  ]
+}

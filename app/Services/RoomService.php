@@ -32,7 +32,6 @@ class RoomService
             ];
         }
 
-        // لا نُرسل 'Status' حتى لا نكسر القيمة الافتراضية
         unset($data['Status']);
 
         return $this->roomRepository->createRoom($data);
