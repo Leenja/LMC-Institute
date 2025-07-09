@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Attendance;
 use App\Models\Course;
 use App\Models\CourseSchedule;
 use App\Models\Enrollment;
@@ -269,7 +270,15 @@ class StudentService
         $startWindow = $endDate->copy()->setTimeFrom($startTime);
         $endWindow = $endDate->copy()->setTimeFrom($endTime);
 
-        return $now->between($startWindow, $endWindow);
+        if (!$now->between($startWindow, $endWindow)) {
+            return false;
+        }
+
+        $hasAttendance = Attendance::where('StudentId', $studentId)
+            ->whereDate('created_at', $endDate->toDateString())
+            ->exists();
+
+        return $hasAttendance;
     }
 
     //View flash cards

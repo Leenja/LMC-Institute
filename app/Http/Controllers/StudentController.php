@@ -178,7 +178,6 @@ class StudentController extends Controller
         ]);
     }
 
-
     public function getSelfTestsByLesson($lessonId)
     {
         if (!\App\Models\Lesson::where('id', $lessonId)->exists()) {
@@ -234,7 +233,7 @@ class StudentController extends Controller
 
         if (!$this->studentService->canAccessFinalTest($studentId, $testId)) {
             return response()->json([
-                'message' => 'You can take the final test only during the last hour of the last course day.'
+                'message' => 'You can take the final test only during the last hour of the last course day,and you have to be attended.'
             ], 403);
         }
 
@@ -262,7 +261,7 @@ class StudentController extends Controller
 
         if (!$this->studentService->canAccessFinalTest($studentId, $request->TestId)) {
             return response()->json([
-                'message' => 'You can take the final test only during the last hour of the last course day.'
+                'message' => 'You can take the final test only during the last hour of the last course day,and you have to be attended.'
             ], 403);
         }
 
@@ -277,7 +276,7 @@ class StudentController extends Controller
 
         if (!$this->studentService->canAccessFinalTest($studentId, $testId)) {
             return response()->json([
-                'message' => 'You can take the final test only during the last hour of the last course day.'
+                'message' => 'You can take the final test only during the last hour of the last course day,and you have to be attended.'
             ], 403);
         }
 
