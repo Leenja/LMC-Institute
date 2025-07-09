@@ -244,6 +244,34 @@ class StudentService
         });
     }
 
+    public function canAccessFinalTest($studentId, $testId): bool
+    {
+        $now = now();
+
+        $courseSchedule = CourseSchedule::whereHas('course', function ($q) use ($studentId, $testId) {
+            $q->where('id', function ($sub) use ($testId) {
+                $sub->select('CourseId')
+                    ->from('tests')
+                    ->where('id', $testId);
+            })->whereHas('Enrollment', function ($q2) use ($studentId) {
+                $q2->where('StudentId', $studentId);
+            });
+        })->first();
+
+        if (!$courseSchedule) {
+            return false;
+        }
+
+        $endDate = Carbon::parse($courseSchedule->End_Date);
+        $startTime = Carbon::parse($courseSchedule->End_Time)->subHour();
+        $endTime = Carbon::parse($courseSchedule->End_Time);
+
+        $startWindow = $endDate->copy()->setTimeFrom($startTime);
+        $endWindow = $endDate->copy()->setTimeFrom($endTime);
+
+        return $now->between($startWindow, $endWindow);
+    }
+
     //View flash cards
     public function getAllFlashCards($studentId)
     {

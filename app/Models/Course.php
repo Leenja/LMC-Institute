@@ -32,6 +32,11 @@ class Course extends Model
         return $this->hasOne(Test::class, 'TestId');
     }
 
+    public function tests()
+    {
+        return $this->hasMany(Test::class, 'CourseId');
+    }
+
     public function Lesson(){
         return $this->hasMany(Lesson::class, 'CourseId');
     }

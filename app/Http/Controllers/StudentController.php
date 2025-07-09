@@ -144,8 +144,6 @@ class StudentController extends Controller
         ]);
     }
 
-    public function takePlacementTest() {}
-
     public function getSelfTestQuestions($selfTestId)
     {
         $studentId = auth()->user()->id;
@@ -230,9 +228,15 @@ class StudentController extends Controller
         ], fn($value) => !is_null($value)));
     }
 
-        public function getFinalTestQuestion($testId)
+    public function getFinalTestQuestion($testId)
     {
         $studentId = auth()->id();
+
+        if (!$this->studentService->canAccessFinalTest($studentId, $testId)) {
+            return response()->json([
+                'message' => 'You can take the final test only during the last hour of the last course day.'
+            ], 403);
+        }
 
         $question = $this->studentService->getNextFinalTestQuestion($studentId, $testId);
 
@@ -256,6 +260,12 @@ class StudentController extends Controller
             'Answer' => 'required|string',
         ]);
 
+        if (!$this->studentService->canAccessFinalTest($studentId, $request->TestId)) {
+            return response()->json([
+                'message' => 'You can take the final test only during the last hour of the last course day.'
+            ], 403);
+        }
+
         $result = $this->studentService->submitFinalTestAnswer($studentId, $request->all());
 
         return response()->json($result);
@@ -264,6 +274,12 @@ class StudentController extends Controller
     public function getAllFinalTestQuestions($testId)
     {
         $studentId = auth()->id();
+
+        if (!$this->studentService->canAccessFinalTest($studentId, $testId)) {
+            return response()->json([
+                'message' => 'You can take the final test only during the last hour of the last course day.'
+            ], 403);
+        }
 
         $questions = $this->studentService->getAllFinalTestQuestions($studentId, $testId);
 
@@ -275,47 +291,129 @@ class StudentController extends Controller
 
     public function getAllPTQuestions()
     {
+        $user = auth()->user();
+        $userId = $user->id;
+
+        $lastTest = PlacementTest::where('GuestId', $userId)
+                                ->latest()
+                                ->first();
+
+        // زائر
+        if ($user->role_id == 6) {
+            if ($lastTest && $lastTest->Status === 'Completed') {
+                return response()->json([
+                    'message' => 'You have already completed the placement test.',
+                ], 403);
+            }
+        }
+
+        elseif ($user->role_id == 5) {
+            if ($lastTest && $lastTest->Status === 'Completed') {
+                $daysSinceLastTest = $lastTest->created_at->diffInDays(now());
+
+                if ($daysSinceLastTest < 30) {
+                    return response()->json([
+                        'message' => 'You must wait at least 30 days to view the placement test again.',
+                        'LastTestDate' => $lastTest->created_at->toDateString(),
+                        'DaysRemaining' => 30 - $daysSinceLastTest
+                    ], 403);
+                }
+            }
+        }
+
+        else {
+            return response()->json([
+                'message' => 'Unauthorized role for placement test questions.'
+            ], 403);
+        }
+
         $questions = PlacementTestQuestion::with(['answers' => function ($query) {
             $query->select('id', 'QuestionId', 'AnswerText');
         }])
-        ->select('id', 'Section', 'Context','Media', 'QuestionText')->get();
+        ->select('id', 'Section', 'Context', 'Media', 'QuestionText')->get();
 
         return response()->json([
             'Questions' => $questions
         ]);
     }
 
-    public function getPTQuestion(){
-        $userId = auth()->id();
+    public function getPTQuestion()
+    {
+        $user = auth()->user();
+        $userId = $user->id;
 
-        $test = PlacementTest::where('GuestId', $userId)
-                            ->latest()
-                            ->first();
+        $lastTest = PlacementTest::where('GuestId', $userId)
+                                ->latest()
+                                ->first();
 
-        if ($test && $test->Status === 'Completed') {
+        if ($user->role_id == 6) {
+            if ($lastTest && $lastTest->Status === 'Completed') {
+                return response()->json([
+                    'message' => 'Test Completed',
+                    'Level' => $lastTest->Level,
+                    'TotalScore' => $lastTest->TotalScore,
+                    'AudioScore' => $lastTest->AudioScore,
+                    'ReadingScore' => $lastTest->ReadingScore,
+                    'SpeakingScore' => $lastTest->SpeakingScore,
+                ]);
+            }
+            if (!$lastTest) {
+                $lastTest = PlacementTest::create([
+                    'GuestId' => $userId,
+                    'LanguageId' => 1,
+                    'Level' => 'Not Set',
+                    'AudioScore' => 0,
+                    'ReadingScore' => 0,
+                    'SpeakingScore' => 0,
+                    'TotalScore' => 0,
+                ]);
+            }
+        }
+
+        elseif ($user->role_id == 5) {
+            if ($lastTest && $lastTest->Status === 'Completed') {
+                $now = now();
+                $diffInDays = $lastTest->created_at->diffInDays($now);
+
+                if ($diffInDays < 30) {
+                    return response()->json([
+                        'message' => 'You must wait at least 30 days before taking the placement test again.',
+                        'LastTestDate' => $lastTest->created_at->toDateString(),
+                        'DaysRemaining' => 30 - $diffInDays
+                    ], 403);
+                }
+
+                $lastTest = PlacementTest::create([
+                    'GuestId' => $userId,
+                    'LanguageId' => 1,
+                    'Level' => 'Not Set',
+                    'AudioScore' => 0,
+                    'ReadingScore' => 0,
+                    'SpeakingScore' => 0,
+                    'TotalScore' => 0,
+                ]);
+            }
+
+            if (!$lastTest) {
+                $lastTest = PlacementTest::create([
+                    'GuestId' => $userId,
+                    'LanguageId' => 1,
+                    'Level' => 'Not Set',
+                    'AudioScore' => 0,
+                    'ReadingScore' => 0,
+                    'SpeakingScore' => 0,
+                    'TotalScore' => 0,
+                ]);
+            }
+        }
+
+        else {
             return response()->json([
-                'message' => 'Test Completed',
-                'Level' => $test->Level,
-                'TotalScore' => $test->TotalScore,
-                'AudioScore' => $test->AudioScore,
-                'ReadingScore' => $test->ReadingScore,
-                'SpeakingScore' => $test->SpeakingScore,
-            ]);
+                'message' => 'Unauthorized role for placement test.'
+            ], 403);
         }
 
-        if (!$test) {
-            $test = PlacementTest::create([
-                'GuestId' => $userId,
-                'LanguageId' => 1,
-                'Level' => 'Not Set',
-                'AudioScore' => 0,
-                'ReadingScore' => 0,
-                'SpeakingScore' => 0,
-                'TotalScore' => 0,
-            ]);
-        }
-
-        $progress = PlacementTestProgress::where('PlacementTestId', $test->id)
+        $progress = PlacementTestProgress::where('PlacementTestId', $lastTest->id)
                                         ->orderByDesc('QuestionId')
                                         ->first();
 
@@ -325,18 +423,18 @@ class StudentController extends Controller
             ->first();
 
         if (!$nextQuestion) {
-            $test->update([
+            $lastTest->update([
                 'Status' => 'Completed',
-                'Level' => $this->determineLevel($test->TotalScore),
+                'Level' => $this->determineLevel($lastTest->TotalScore),
             ]);
 
             return response()->json([
                 'message' => 'Test Completed',
-                'Level' => $test->Level,
-                'TotalScore' => $test->TotalScore,
-                'AudioScore' => $test->AudioScore,
-                'ReadingScore' => $test->ReadingScore,
-                'SpeakingScore' => $test->SpeakingScore,
+                'Level' => $lastTest->Level,
+                'TotalScore' => $lastTest->TotalScore,
+                'AudioScore' => $lastTest->AudioScore,
+                'ReadingScore' => $lastTest->ReadingScore,
+                'SpeakingScore' => $lastTest->SpeakingScore,
             ]);
         }
 
