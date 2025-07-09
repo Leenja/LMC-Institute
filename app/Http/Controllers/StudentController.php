@@ -42,7 +42,36 @@ class StudentController extends Controller
     {
         $studentId = auth()->user()->id;
 
-        $courses = $this->studentService->getEnrolledCourses($studentId);
+        $enrollments  = $this->studentService->getEnrolledCourses($studentId);
+
+        $courses = $enrollments->map(function ($course) {
+            $firstSchedule = $course->CourseSchedule->first();
+
+            return [
+                'id' => $course->id,
+                'Room Number' => $firstSchedule->Room->NumberOfRoom ?? null,
+                'Teacher Name' => $course->User->name ?? null,
+                'Language' => $course->Language->Name ?? null,
+                'Description' => $course->Description,
+                'Photo' => $course->Photo,
+                'Status' => $course->Status,
+                'Level' => $course->Level,
+                'course_schedule' => $course->CourseSchedule->map(function ($schedule) {
+                    return [
+                        'id' => $schedule->id,
+                        'CourseId' => $schedule->CourseId,
+                        'Start_Enroll' => $schedule->Start_Enroll,
+                        'End_Enroll' => $schedule->End_Enroll,
+                        'Enroll_Status' => $schedule->Enroll_Status,
+                        'Start_Date' => $schedule->Start_Date,
+                        'End_Date' => $schedule->End_Date,
+                        'Start_Time' => $schedule->Start_Time,
+                        'End_Time' => $schedule->End_Time,
+                        'CourseDays' => $schedule->CourseDays,
+                    ];
+                }),
+            ];
+        });
 
         return response()->json([
             'message' => 'Enrolled courses retrieved successfully.',
