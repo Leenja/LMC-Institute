@@ -297,16 +297,103 @@ class ManagerController extends Controller
         return response()->json($info);
     }
 
-    public function reviewFinalGrades() {
+    public function reviewFinalGrades()
+    {
+        $students = DB::table('final_grades')
+            ->join('users', 'final_grades.StudentId', '=', 'users.id')
+            ->join('courses', 'final_grades.CourseId', '=', 'courses.id')
+            ->select(
+                'users.name as StudentName',
+                'users.id as StudentId',
+                'courses.id as CourseId',
+                'courses.Description as CourseName',
+                'final_grades.FinalTestScore',
+                'final_grades.Bonus',
+                'final_grades.FinalGrade'
+            )
+            ->get();
 
+        return response()->json([
+            'message' => 'Final grades retrieved successfully.',
+            'data' => $students
+        ]);
     }
 
-    public function addHolidays(Request $request) {
+    public function reviewFinalGradesForCourse($courseId)
+    {
+        $students = DB::table('final_grades')
+            ->join('users', 'final_grades.StudentId', '=', 'users.id')
+            ->join('courses', 'final_grades.CourseId', '=', 'courses.id')
+            ->where('final_grades.CourseId', $courseId)
+            ->select(
+                'users.name as StudentName',
+                'users.id as StudentId',
+                'courses.id as CourseId',
+                'courses.Description as CourseName',
+                'final_grades.FinalTestScore',
+                'final_grades.Bonus',
+                'final_grades.FinalGrade'
+            )
+            ->get();
 
+        return response()->json([
+            'message' => 'Final grades for course retrieved successfully.',
+            'data' => $students
+        ]);
     }
 
-    public function addTasks(Request $request) {
+    public function reviewFinalGradeForStudent($studentId)
+    {
+        $grades = DB::table('final_grades')
+            ->join('courses', 'final_grades.CourseId', '=', 'courses.id')
+            ->join('users', 'final_grades.StudentId', '=', 'users.id')
+            ->where('final_grades.StudentId', $studentId)
+            ->select(
+                'users.name as StudentName',
+                'users.id as StudentId',
+                'courses.id as CourseId',
+                'courses.Description as CourseName',
+                'final_grades.FinalTestScore',
+                'final_grades.Bonus',
+                'final_grades.FinalGrade'
+            )
+            ->get();
 
+        return response()->json([
+            'message' => 'Final grades for student retrieved successfully.',
+            'data' => $grades
+        ]);
+    }
+
+    public function getTopStudentForCourse($courseId)
+    {
+        $topStudent = DB::table('final_grades')
+            ->join('users', 'final_grades.StudentId', '=', 'users.id')
+            ->join('courses', 'final_grades.CourseId', '=', 'courses.id')
+            ->where('final_grades.CourseId', $courseId)
+            ->orderByDesc('final_grades.FinalGrade')
+            ->select(
+                'users.name as StudentName',
+                'users.id as StudentId',
+                'courses.id as CourseId',
+                'courses.Description as CourseName',
+                'final_grades.FinalTestScore',
+                'final_grades.Bonus',
+                'final_grades.FinalGrade'
+            )
+            ->first();
+
+        if ($topStudent) {
+            return response()->json([
+                'message' => 'Top student retrieved successfully.',
+                'data' => $topStudent
+            ]);
+        } else {
+            return response()->json([
+                'message' => 'No students found for this course.',
+                'data' => null
+            ], 404);
+        }
     }
 
     public function viewStatistics() {

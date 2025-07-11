@@ -533,8 +533,6 @@ class StaffController extends Controller
     }
 
     //Teacher---------------------------------------------------
-    public function sendAssignments() {}
-
     public function reviewMyCourses()
     {
         $teacherId = auth()->user()->id;
@@ -578,7 +576,6 @@ class StaffController extends Controller
 
         return response()->json($result);
     }
-
 
     public function reviewStudentsNames($courseId)
     {

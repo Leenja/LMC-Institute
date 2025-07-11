@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FinalTestAnswer;
+use App\Models\FinalTestProgress;
 use App\Models\Language;
+use App\Models\Lesson;
 use App\Models\LMCInfo;
 use App\Models\PlacementTest;
 use App\Models\PlacementTestAnswer;
@@ -10,9 +13,12 @@ use App\Models\PlacementTestProgress;
 use App\Models\PlacementTestQuestion;
 use App\Models\SelfTestProgress;
 use App\Models\SelfTestQuestion;
+use App\Models\Test;
+use App\Models\TestQuestion;
 use App\Models\User;
 use App\Services\StudentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class StudentController extends Controller
 {
@@ -285,6 +291,56 @@ class StudentController extends Controller
         return response()->json([
             'message' => 'All final test questions retrieved successfully.',
             'questions' => $questions,
+        ]);
+    }
+
+    //Click when finish the test
+    public function submitFinalTest(Request $request)
+    {
+        $studentId = auth()->id();
+        $testId = $request->input('TestId');
+
+        $test = Test::findOrFail($testId);
+
+        $totalQuestions = TestQuestion::where('TestId', $testId)->count();
+        $answered = FinalTestAnswer::where('StudentId', $studentId)->where('TestId', $testId)->count();
+
+        if ($answered < $totalQuestions) {
+            return response()->json([
+                'message' => 'You must answer all questions before submitting the test.'
+            ], 400);
+        }
+
+        $score = FinalTestProgress::where('StudentId', $studentId)
+            ->where('TestId', $testId)
+            ->sum('Score');
+
+        $courseId = $test->CourseId;
+        $lessonIds = Lesson::where('CourseId', $courseId)->pluck('id');
+
+        $bonus = DB::table('attendances')
+            ->where('StudentId', $studentId)
+            ->whereIn('LessonId', $lessonIds)
+            ->sum('Bonus');
+
+        $finalGrade = $score + $bonus;
+
+        DB::table('final_grades')->updateOrInsert(
+            ['StudentId' => $studentId, 'CourseId' => $courseId],
+            [
+                'FinalTestScore' => $score,
+                'Bonus' => $bonus,
+                'FinalGrade' => $finalGrade,
+                'updated_at' => now(),
+                'created_at' => now()
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Final test submitted successfully.',
+            'FinalTestScore' => $score,
+            'Bonus' => $bonus,
+            'FinalGrade' => $finalGrade
         ]);
     }
 

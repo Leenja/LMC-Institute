@@ -85,6 +85,14 @@ Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->g
 
     Route::delete('deletePlacementTestQuestion/{id}', [ManagerController::class, 'deletePlacementTestQuestion']);
 
+    Route::get('reviewFinalGrades', [ManagerController::class, 'reviewFinalGrades']);
+
+    Route::get('reviewFinalGradesForCourse/{id}', [ManagerController::class, 'reviewFinalGradesForCourse']);
+
+    Route::get('reviewFinalGradeForStudent/{id}', [ManagerController::class, 'reviewFinalGradeForStudent']);
+
+    Route::get('getTopStudentForCourse/{id}', [ManagerController::class, 'getTopStudentForCourse']);
+
     Route::get('getRoles', [StaffController::class, 'getRoles']);
 
     Route::get('getUsersByRoleId/{roleId}', [StaffController::class, 'getUsersByRoleId']);
@@ -254,6 +262,8 @@ Route::middleware(['auth:sanctum', 'role:Student|SuperAdmin'])->prefix('student'
     Route::get("getAllFinalTestQuestions/{testId}", [StudentController::class,"getAllFinalTestQuestions"]);
 
     Route::post("submitFinalTestAnswer", [StudentController::class,"submitFinalTestAnswer"]);
+
+    Route::post("submitFinalTest", [StudentController::class,"submitFinalTest"]);
 
     Route::get("viewAllFlashCards", [StudentController::class, "viewAllFlashCards"]);
 
