@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ProcessPlacementFile;
+use App\Models\Course;
+use App\Models\CourseSchedule;
 use App\Models\LMCInfo;
 use App\Models\PlacementTestAnswer;
 use App\Models\PlacementTestQuestion;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -396,7 +399,30 @@ class ManagerController extends Controller
         }
     }
 
-    public function viewStatistics() {
+   public function viewStatistics()
+    {
+        $stats = [
+            'Total Students' => User::where('role_id', 5)->count(),
+            'New students this month' => User::where('role_id', 5)
+                ->whereMonth('created_at', now()->month)
+                ->count(),
+            'Active Teachers' => User::where('role_id',3)->count(),
+            'Active Courses' => CourseSchedule::where('Start_Date', '<=', now())
+                ->where('End_Date', '>=', now())->count(),
+            'Completed Courses' => CourseSchedule::where('End_Date', '<', now())->count(),
+            'Average Of final grades' => DB::table('final_grades')->avg('FinalGrade'),
+            'Top Course' => Course::withCount('Enrollment')->first(['Description']),
+            'Students Without Final Test' => DB::table('enrollments')
+                ->leftJoin('final_grades', function ($join) {
+                    $join->on('enrollments.StudentId', '=', 'final_grades.StudentId')
+                        ->on('enrollments.CourseId', '=', 'final_grades.CourseId');
+                })
+                ->whereNull('final_grades.id')->count(),
+        ];
 
+        return response()->json([
+            'message' => 'Manager statistics retrieved successfully.',
+            'data' => $stats,
+        ]);
     }
 }

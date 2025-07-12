@@ -750,8 +750,6 @@ class StudentController extends Controller
         ]);
     }
 
-    public function requestPrivateCourse() {}
-
     public function viewProgress()
     {
         $studentId = auth()->user()->id;
@@ -774,4 +772,69 @@ class StudentController extends Controller
             'Your Roadmap' => $roadmap
         ]);
     }
+
+    public function studentLog()
+    {
+        $studentId = auth()->id();
+
+        $courses = DB::table('enrollments')
+            ->join('courses', 'enrollments.CourseId', '=', 'courses.id')
+            ->join('course_schedules', 'courses.id', '=', 'course_schedules.CourseId')
+            ->where('enrollments.StudentId', $studentId)
+            ->select(
+                'courses.id as CourseId',
+                'courses.Description as CourseName',
+                'course_schedules.Start_Date',
+                'course_schedules.End_Date'
+            )
+            ->get();
+
+        $log = [];
+
+        foreach ($courses as $course) {
+            //Final Grade
+            $finalGrade = DB::table('final_grades')
+                ->where('CourseId', $course->CourseId)
+                ->where('StudentId', $studentId)
+                ->value('FinalGrade');
+
+            //Bonus only
+            $bonus = DB::table('attendances')
+                ->join('lessons', 'attendances.LessonId', '=', 'lessons.id')
+                ->where('lessons.CourseId', $course->CourseId)
+                ->where('attendances.StudentId', $studentId)
+                ->sum('Bonus');
+
+            //Attendance
+            $lessonCount = DB::table('lessons')
+                ->where('CourseId', $course->CourseId)
+                ->count();
+
+            $attendedLessons = DB::table('attendances')
+                ->join('lessons', 'attendances.LessonId', '=', 'lessons.id')
+                ->where('lessons.CourseId', $course->CourseId)
+                ->where('attendances.StudentId', $studentId)
+                ->count();
+
+            $attendancePercentage = $lessonCount > 0 ? round(($attendedLessons / $lessonCount) * 100, 2) : 0;
+
+            $log[] = [
+                'CourseId' => $course->CourseId,
+                'CourseName' => $course->CourseName,
+                'StartDate' => $course->Start_Date,
+                'EndDate' => $course->End_Date,
+                'BonusScore' => $bonus,
+                'FinalGrade' => $finalGrade ?? 'Not Graded',
+                'AttendancePercentage' => $attendancePercentage . '%',
+            ];
+        }
+
+        $studentName = auth()->user()->name;
+
+        return response()->json([
+            'message' => 'Student ' .$studentName. ' log retrieved successfully.',
+            'data' => $log,
+        ]);
+    }
+
 }

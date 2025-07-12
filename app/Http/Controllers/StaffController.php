@@ -17,6 +17,7 @@ use Exception;
 use App\Services\RoleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class StaffController extends Controller
@@ -1039,4 +1040,76 @@ class StaffController extends Controller
             'FlashCards' => $flashCards
         ]);
     }
+
+    public function teacherLog()
+    {
+        $teacherId = auth()->id();
+
+        $courses = DB::table('course_schedules')
+            ->join('courses', 'course_schedules.CourseId', '=', 'courses.id')
+            ->where('courses.TeacherId', $teacherId)
+            ->where('course_schedules.End_Date', '<', now())
+            ->select(
+                'courses.Description as CourseName',
+                'course_schedules.Start_Date',
+                'course_schedules.End_Date',
+                'course_schedules.id as ScheduleId',
+                'course_schedules.CourseId'
+            )
+            ->get();
+
+        $log = [];
+
+        foreach ($courses as $course) {
+            $studentCount = DB::table('enrollments')
+                ->where('CourseId', $course->CourseId)
+                ->count();
+
+            $avgGrade = DB::table('final_grades')
+                ->where('CourseId', $course->CourseId)
+                ->avg('FinalGrade');
+
+            //top student
+            $topStudent = DB::table('final_grades')
+                ->join('users', 'final_grades.StudentId', '=', 'users.id')
+                ->where('final_grades.CourseId', $course->CourseId)
+                ->orderByDesc('FinalGrade')
+                ->select('users.name as StudentName', 'FinalGrade')
+                ->first();
+
+            //attendance percentage
+            $lessonCount = DB::table('lessons')
+                ->where('CourseId', $course->CourseId)
+                ->count();
+
+            $maxAttendance = $studentCount * $lessonCount;
+
+            $actualAttendance = DB::table('attendances')
+                ->join('lessons', 'attendances.LessonId', '=', 'lessons.id')
+                ->where('lessons.CourseId', $course->CourseId)
+                ->count();
+
+            $attendancePercentage = $maxAttendance > 0 ? round(($actualAttendance / $maxAttendance) * 100, 2) : 0;
+
+            $log[] = [
+                'Course Id' => $course->CourseId,
+                'Course Name' => $course->CourseName,
+                'Start Date' => $course->Start_Date,
+                'End Date' => $course->End_Date,
+                'Students Count' => $studentCount,
+                'Average Grade' => round($avgGrade, 2),
+                'Top Student' => $topStudent ? $topStudent->StudentName : null,
+                'Top Student Grade' => $topStudent ? $topStudent->FinalGrade : null,
+                'Attendance Percentage' => $attendancePercentage . '%',
+            ];
+        }
+
+        $teacherName = auth()->user()->name;
+
+        return response()->json([
+            'message' => 'Teacher '. $teacherName. ' log retrieved successfully.',
+            'data' => $log,
+        ]);
+    }
+
 }

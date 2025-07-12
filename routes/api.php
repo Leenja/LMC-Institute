@@ -111,6 +111,7 @@ Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->g
 
     Route::delete('destroyPage/{id}', [PageController::class, 'destroyPage']);
 
+    Route::get('viewStatistics', [ManagerController::class, 'viewStatistics']);
 });
 
 
@@ -180,6 +181,8 @@ Route::middleware(['auth:sanctum', 'role:Teacher|SuperAdmin'])->prefix('teacher'
     Route::post('submitComplaint', [ComplaintController::class, 'submitComplaint']);
 
     Route::post('assignTaskToSecretary', [TaskController::class, 'assignTaskToSecretary']);
+
+    Route::get('teacherLog', [StaffController::class , 'teacherLog']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Secretarya|SuperAdmin'])->prefix('secretarya')->group(function () {
@@ -282,6 +285,8 @@ Route::middleware(['auth:sanctum', 'role:Student|SuperAdmin'])->prefix('student'
     Route::get("viewMyNotes", [StudentController::class, "viewMyNotes"]);
 
     Route::get("viewProgress", [StudentController::class, "viewProgress"]);
+
+    Route::get('studentLog', [StudentController::class , 'studentLog']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Guest'])->prefix('guest')->group(function () {
