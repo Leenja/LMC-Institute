@@ -23,7 +23,6 @@ class StaffService
     private $staffRepository;
     protected $roleRepository;
 
-
     public function __construct(StaffRepository $staffRepository, RoleRepository $roleRepository)
     {
         $this->staffRepository = $staffRepository;
@@ -39,7 +38,6 @@ class StaffService
     {
         return $this->roleRepository->getUsersByRoleId($roleId);
     }
-
 
     public function deleteEmployee($userId)
     {
@@ -235,7 +233,6 @@ class StaffService
                 );
             }
 
-
             if ($conflict) {
                 return response()->json([
                     'Message' => 'The new course schedule conflicts with an existing course in the same room.'
@@ -398,7 +395,6 @@ class StaffService
             }
             $extraDate->addDay();
         }
-
         return $days;
     }
 
@@ -418,7 +414,6 @@ class StaffService
             }
 
             $conflict = $this->staffRepository->checkCourseScheduleConflict(
-                // $data['RoomId'],
                 $roomId = $data['RoomId'] ?? null,
                 $data['Start_Date'],
                 $endDate,
@@ -427,11 +422,8 @@ class StaffService
                 $data['End_Time']
             );
 
-
             if ($conflict) {
-                return response()->json([
-                    'Message' => 'The updated course schedule conflicts with an existing course in the same room.'
-                ], 400);
+                throw new \Exception('The updated course schedule conflicts with an existing course in the same room.');
             }
 
             $teacherId = Course::where('id', $data['CourseId'])->value('TeacherId');
@@ -452,16 +444,6 @@ class StaffService
             }
 
             // Update the schedule
-            /*$this->staffRepository->updateCourseSchedule($data['CourseId'], [
-                'RoomId' => $data['RoomId'],
-                'Start_Enroll' => $data['Start_Enroll'],
-                'End_Enroll' => $data['End_Enroll'],
-                'Start_Date' => Carbon::parse($data['Start_Date'])->setTimeFromTimeString($data['Start_Time']),
-                'End_Date' => $endDate,
-                'Start_Time' => $data['Start_Time'],
-                'End_Time' => $data['End_Time'],
-                'CourseDays' => $data['CourseDays'],
-            ]);*/
 
             // $holidays = Holiday::pluck('date')->map(fn($d) => Carbon::parse($d)->toDateString())->toArray();
             $holidays = Holiday::all()->flatMap(function ($holiday) {
@@ -620,7 +602,6 @@ class StaffService
             'Lessons' => $lessons
         ];
     }
-
 
     //Flash card
     public function addFlashCard($data)

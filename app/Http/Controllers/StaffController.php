@@ -15,6 +15,7 @@ use App\Services\StaffService;
 use Carbon\Carbon;
 use Exception;
 use App\Services\RoleService;
+use App\Services\RoomService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -429,8 +430,6 @@ class StaffController extends Controller
 
         $data = $request->validate([
             'CourseId' => 'required|exists:courses,id',
-            //'RoomId' => 'required|exists:rooms,id',
-            'RoomId' => 'nullable|exists:rooms,id',
             'Photo' => 'nullable|file|image|mimes:jpeg,png,jpg,gif|max:2048',
             'Start_Enroll' => 'required|date|after_or_equal:now()|before_or_equal:End_Enroll',
             'End_Enroll' => 'required|date|after_or_equal:now()|after_or_equal:Start_Enroll',
@@ -466,9 +465,17 @@ class StaffController extends Controller
             $data['Photo'] = $imageUrl;
         }
 
-        return response()->json(
-            $this->staffService->editCourse($data)
-        );
+        $editResult = $this->staffService->editCourse($data);
+
+        //auto reserve after edit
+        $schedule = CourseSchedule::where('CourseId', $data['CourseId'])->first();
+
+        if ($schedule) {
+            app(RoomService::class)->assignRoomToCourse($schedule);
+            app(RoomService::class)->optimizeRoomAssignments();
+        }
+
+        return response()->json($editResult);
     }
 
     public function deleteCourse($courseId)
