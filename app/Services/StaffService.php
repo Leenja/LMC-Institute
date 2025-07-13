@@ -207,6 +207,10 @@ class StaffService
         return $this->staffRepository->getEnrolledStudentsInCourse($courseId);
     }
 
+    public function viewEnrolledStudentsForLanguage($languageId) {
+        return $this->staffRepository->getEnrolledStudentsForLanguage($languageId);
+    }
+
     //Add course
     public function createCourseWithSchedule($data)
     {

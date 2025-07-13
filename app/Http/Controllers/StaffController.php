@@ -289,7 +289,6 @@ class StaffController extends Controller
         }
     }
 
-
     //Secretary--------------------------------------------------
     public function enrollStudent(Request $request)
     {
@@ -363,6 +362,13 @@ class StaffController extends Controller
                     ] : null,
                 ];
             });
+    }
+
+    public function getEnrolledStudentsForLanguage($languageId)
+    {
+        return response()->json(
+            $this->staffService->viewEnrolledStudentsForLanguage($languageId)
+        );
     }
 
     public function addCourse(Request $request)

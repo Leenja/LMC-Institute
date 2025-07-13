@@ -69,6 +69,21 @@ class StaffRepository
             });
     }
 
+    public function getEnrolledStudentsForLanguage($languageId)
+    {
+        $students = DB::table('enrollments')
+        ->join('courses', 'enrollments.CourseId', '=', 'courses.id')
+        ->join('users', 'enrollments.StudentId', '=', 'users.id')
+        ->where('courses.LanguageId', $languageId)
+        ->select('users.id as StudentId', 'users.name as StudentName', 'users.email')
+        ->distinct()->get();
+
+        return [
+            'count' => $students->count(),
+            'students' => $students,
+        ];
+    }
+
     //Add course
     public function createCourse($data)
     {

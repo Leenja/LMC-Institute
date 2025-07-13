@@ -204,6 +204,8 @@ Route::middleware(['auth:sanctum', 'role:Secretarya|SuperAdmin'])->prefix('secre
 
     Route::get("viewEnrolledStudentsInCourse/{course}", [StaffController::class, "viewEnrolledStudentsInCourse"]);
 
+    Route::get("getEnrolledStudentsForLanguage/{language}", [StaffController::class, "getEnrolledStudentsForLanguage"]);
+
     Route::get("getAllEnrolledStudents", [StaffController::class, "getAllEnrolledStudents"]);
 
     Route::get('showInvoice/{id}', [InvoiceController::class, 'showInvoice']);

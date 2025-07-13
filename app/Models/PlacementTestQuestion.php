@@ -12,6 +12,7 @@ class PlacementTestQuestion extends Model
     use HasFactory;
 
     protected $fillable = [
+        'Section',
         'QuestionText',
         'Context',
         'Media',
