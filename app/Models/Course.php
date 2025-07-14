@@ -67,4 +67,9 @@ class Course extends Model
     public function Enrollment(){
         return $this->hasMany(Enrollment::class, 'CourseId');
     }
+
+    public function certificate()
+    {
+        return $this->hasMany(Certificate::class, 'CourseId');
+    }
 }

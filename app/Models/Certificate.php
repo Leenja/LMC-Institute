@@ -12,11 +12,21 @@ class Certificate extends Model
     use HasFactory;
 
     protected $fillable = [
-        'EnrollmentId',
-        'Path'
+        'CourseId',
+        'StudentId',
+        'VerificationCode',
+        'CourseLanguage',
+        'CourseLevel',
+        'TeacherName',
     ];
 
-    public function Enrollment(){
-        return $this->belongsTo(Enrollment::class, 'EnrollmentId');
+    public function course()
+    {
+        return $this->belongsTo(Course::class, 'CourseId');
+    }
+
+    public function student()
+    {
+        return $this->belongsTo(User::class, 'StudentId');
     }
 }

@@ -13,8 +13,12 @@ return new class extends Migration
     {
         Schema::create('certificates', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('EnrollmentId')->constrained('enrollments');
-            $table->string('Path');
+            $table->foreignId('CourseId')->constrained('courses')->onDelete('cascade');
+            $table->foreignId('StudentId')->constrained('users')->onDelete('cascade');
+            $table->string('VerificationCode')->unique();
+            $table->string('CourseLanguage');
+            $table->string('CourseLevel');
+            $table->string('TeacherName');
             $table->timestamps();
         });
     }

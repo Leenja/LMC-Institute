@@ -5,6 +5,7 @@ use App\Http\Controllers\ComplaintController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FirebaseTokenController;
+use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\IndividualCourseRequestController;
 use App\Http\Controllers\InvoiceController;
@@ -291,6 +292,12 @@ Route::middleware(['auth:sanctum', 'role:Student|SuperAdmin'])->prefix('student'
     Route::get("viewProgress", [StudentController::class, "viewProgress"]);
 
     Route::get('studentLog', [StudentController::class , 'studentLog']);
+
+    Route::post('requestCertificate', [CertificateController::class, 'requestCertificate']);
+
+    Route::get('viewCertificate/{course_id}', [CertificateController::class, 'viewCertificate']);
+
+    Route::get('listCertificates', [CertificateController::class, 'listCertificates']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Guest'])->prefix('guest')->group(function () {
@@ -371,6 +378,8 @@ Route::get('showPage/{id}', [PageController::class, 'showPage']);
 
 Route::get('getLibraryByLanguage/{languageId}', [LibraryController::class, 'getLibraryByLanguage']);
 
+Route::get('verifyCertificate/{token}', [CertificateController::class, 'verifyCertificate']);
+
 
 // Authenticated routes (all logged-in users)
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -381,5 +390,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
 
     Route::post('editFirebaseToken', [FirebaseTokenController::class, 'update']);
+
+    Route::get('getNotifications', [FirebaseTokenController::class, 'getNotifications']);
+
+    Route::get('getUnreadCount', [FirebaseTokenController::class, 'getUnreadCount']);
+
+    Route::post('markAsRead', [FirebaseTokenController::class, 'markAsRead']);
 
 });

@@ -79,6 +79,10 @@ class User extends Authenticatable /*implements JWTSubject*/
         return $this->hasMany(DeviceToken::class, 'user_id');
     }
 
+    public function certificate()
+    {
+        return $this->hasMany(Certificate::class, 'StudentId');
+    }
 
     public function IndividualCourseRequest()
     {
