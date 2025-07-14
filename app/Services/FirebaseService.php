@@ -25,7 +25,7 @@ class FirebaseService
         $tokens = $user->firebaseTokens->pluck('device_key')->toArray();
 
         if (empty($tokens)) {
-            return ['message' => 'لا توجد أجهزة مسجلة لهذا المستخدم', 'success' => false];
+            return ['message' => 'No registered devices found for this user', 'success' => false];
         }
 
         $notification = Notification::create($title, $body);
@@ -36,7 +36,7 @@ class FirebaseService
         return [
             'success' => $response->successes()->count(),
             'failures' => $response->failures()->count(),
-            'message' => 'تم إرسال الإشعار',
+            'message' => 'Notification is sent',
         ];
     }
 }

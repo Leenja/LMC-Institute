@@ -4,17 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
 use App\Models\DeviceToken;
 use App\Models\Notification;
 use App\Models\User;
 use App\Models\UserNotification;
 use Illuminate\Support\Facades\Http;
-use Spatie\Permission\Models\Role;
-
 use App\Services\FirebaseService;
-
-
 
 class FirebaseTokenController extends Controller
 {
@@ -27,12 +22,10 @@ class FirebaseTokenController extends Controller
 
         $user = auth()->user();
 
-        // حذف التوكن القديم إذا وُجد
         if ($request->oldFirebaseToken) {
             DeviceToken::where('device_key', $request->oldFirebaseToken)->delete();
         }
 
-        // إذا لم يكن موجود مسبقًا
         $exists = DeviceToken::where('device_key', $request->newFirebaseToken)->exists();
         if (!$exists) {
             DeviceToken::create([
@@ -43,7 +36,6 @@ class FirebaseTokenController extends Controller
 
         return response()->json(['message' => 'Firebase token updated successfully.']);
     }
-
 
     /*function sendNotificationToUser($userId, $title, $body)
     {
@@ -108,28 +100,25 @@ class FirebaseTokenController extends Controller
             'users.*' => 'string'
         ]);
 
-
         $roles = $request->users;
 
-        $users = \App\Models\User::role($roles)->get(); // from Spatie
+        $users = User::role($roles)->get();
 
-
-        // 2. إنشاء إشعار جديد وتخزين الأدوار كسلسلة JSON
-       /* $notification = Notification::create([
+        $notification = Notification::create([
             'title' => $request->title,
             'body' => $request->body,
-            'target_roles' => $roles, // يتم تخزينه كمصفوفة وسيتم تحويله تلقائيًا بفضل cast في الموديل
-        ]);*/
+            'target_roles' => $roles,
+        ]);
 
-        $firebaseService = new \App\Services\FirebaseService();
+        $firebaseService = new FirebaseService();
 
         $results = [];
 
         foreach ($users as $user) {
-           /* UserNotification::create([
+            UserNotification::create([
                 'user_id' => $user->id,
                 'notification_id' => $notification->id,
-            ]);*/
+            ]);
 
             $results[] = [
                 'user_id' => $user->id,
@@ -138,7 +127,7 @@ class FirebaseTokenController extends Controller
         }
 
         return response()->json([
-            'message' => 'تم إرسال الإشعارات',
+            'message' => 'Notifications are sent!',
             'results' => $results,
         ]);
     }
@@ -150,7 +139,6 @@ class FirebaseTokenController extends Controller
     }
 
     //should test
-
     public function getNotifications()
     {
         /** @var \App\Models\User $user */
@@ -183,7 +171,6 @@ class FirebaseTokenController extends Controller
         return response()->json(['unread' => $count]);
     }
 
-
     public function markAsRead(Request $request)
     {
         $request->validate([
@@ -200,7 +187,7 @@ class FirebaseTokenController extends Controller
         return response()->json(['message' => 'Marked as read']);
     }
 
-    public function sendNotification(Request $request)
+    /*public function sendNotification(Request $request)
     {
         $request->validate([
             'title' => 'required|string',
@@ -246,5 +233,5 @@ class FirebaseTokenController extends Controller
             ],
             'priority' => 'high',
         ]);
-    }
+    }*/
 }
