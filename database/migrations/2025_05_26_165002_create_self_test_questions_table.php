@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('SelfTestId')->constrained('self_tests')->onDelete('cascade');
             $table->string('Media')->nullable();
-            $table->text('QuestionText');
-            $table->enum('Type', ['MCQ', 'true_false','translate']);
+            $table->text('QuestionText')->nullable();
+            $table->enum('Type', ['MCQ', 'true_false','translate'])->nullable();
             $table->json('Choices')->nullable(); // Only for MCQ
             $table->string('CorrectAnswer')->nullable();
             $table->timestamps();

@@ -725,7 +725,7 @@ class StaffController extends Controller
     {
         $data = $request->validate([
             'SelfTestId' => 'required|exists:self_tests,id',
-            'Media' => 'sometimes|file|mimes:m4v,webm,flv,wmv,mov,mkv,avi,mp4,tif,tiff,heic,svg,bmp,webp,gif,png,jpeg,jpg',
+            'Media' => 'sometimes|file|mimes:m4v,webm,flv,wmv,mov,mkv,avi,mp4,mp3,wav,ogg,tif,tiff,heic,svg,bmp,webp,gif,png,jpeg,jpg',
             'QuestionText' => 'required|string',
             'Type' => 'required|in:MCQ,true_false,translate',
             'Choices' => 'required_if:Type,MCQ|nullable|json', // Only for MCQ
@@ -764,9 +764,9 @@ class StaffController extends Controller
     {
         $data = $request->validate([
             'SelfTestQuestionId' => 'required|exists:self_test_questions,id',
-            'Media' => 'sometimes|file|mimes:m4v,webm,flv,wmv,mov,mkv,avi,tif,tiff,heic,svg,bmp,webp,gif,png,jpeg,jpg',
-            'QuestionText' => 'sometimes|string',
-            'Type' => 'sometimes|in:MCQ,true_false,translate',
+            'Media' => 'nullable|file|mimes:m4v,webm,flv,wmv,mov,mkv,avi,mp4,mp3,wav,ogg,tif,tiff,heic,svg,bmp,webp,gif,png,jpeg,jpg',
+            'QuestionText' => 'nullable|string',
+            'Type' => 'nullable|in:MCQ,true_false,translate',
             'Choices' => 'required_if:Type,MCQ|nullable|json', // Only for MCQ
             'CorrectAnswer' => 'nullable|string',
         ]);

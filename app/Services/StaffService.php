@@ -572,23 +572,6 @@ class StaffService
 
     //Review schedule for today
 
-    /*public function getTodaysSchedule()
-    {
-        $teacherId = auth()->user()->id;
-        $today = now()->toDateString();
-
-        $lessons = $this->staffRepository->getScheduleByDay($teacherId, $today);
-
-        if ($lessons->isEmpty()) {
-            return ['message' => 'You do not have any lessons today.'];
-        }
-
-        return [
-            'message' => 'You have lessons scheduled today.',
-            'Lessons' => $lessons
-        ];
-    }*/
-
     public function getScheduleByDate($date = null)
     {
         $teacherId = auth()->user()->id;
@@ -810,13 +793,29 @@ class StaffService
     {
         $question = SelfTestQuestion::findOrFail($data['SelfTestQuestionId']);
 
-        $question->update([
-            'Media' => $data['Media'] ?? $question->Media,
-            'QuestionText' => $data['QuestionText'],
-            'Type' => $data['Type'],
-            'Choices' => $data['Choices'] ?? null,
-            'CorrectAnswer' => $data['CorrectAnswer'] ?? null,
-        ]);
+        $updates = [];
+
+        if (array_key_exists('Media', $data)) {
+            $updates['Media'] = $data['Media'];
+        }
+
+        if (array_key_exists('QuestionText', $data)) {
+            $updates['QuestionText'] = $data['QuestionText'];
+        }
+
+        if (array_key_exists('Type', $data)) {
+            $updates['Type'] = $data['Type'];
+        }
+
+        if (array_key_exists('Choices', $data)) {
+            $updates['Choices'] = $data['Choices'];
+        }
+
+        if (array_key_exists('CorrectAnswer', $data)) {
+            $updates['CorrectAnswer'] = $data['CorrectAnswer'];
+        }
+
+        $question->update($updates);
 
         return $question;
     }
@@ -829,7 +828,7 @@ class StaffService
         return true;
     }
 
-        public function addFinalTest($data, $teacherId)
+    public function addFinalTest($data, $teacherId)
     {
         return DB::transaction(function () use ($data, $teacherId) {
             return $this->staffRepository->createFinalTest($data, $teacherId);
