@@ -71,6 +71,8 @@ Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->g
 
     Route::post('upload-placement-questions', [ManagerController::class, 'uploadQuestions']);
 
+    Route::delete('deleteAllPlacementTestQuestions' , [ManagerController::class, 'deleteAllPlacementTestQuestions']);
+
     Route::post('markCorrectAnswer/{id}', [ManagerController::class, 'markCorrectAnswer']);
 
     Route::post('addOrUpdatePTMedia/{id}', [ManagerController::class, 'addOrUpdatePTMedia']);

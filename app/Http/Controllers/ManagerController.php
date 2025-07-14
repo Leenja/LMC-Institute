@@ -264,6 +264,33 @@ class ManagerController extends Controller
         }
     }
 
+    public function deleteAllPlacementTestQuestions()
+    {
+        DB::beginTransaction();
+
+        try {
+            DB::table('placement_test_progress')->delete();
+
+            DB::table('placement_test_answers')->delete();
+
+            DB::table('placement_test_questions')->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'All placement test questions and answers have been deleted successfully'
+            ], 200);
+
+        } catch (Exception $e) {
+            DB::rollback();
+
+            return response()->json([
+                'message' => 'Failed to delete placement test data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function editLMCInfo(Request $request)
     {
         $info = LMCInfo::findOrFail(1);
