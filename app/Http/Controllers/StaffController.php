@@ -816,7 +816,7 @@ class StaffController extends Controller
         }
     }
 
-        public function addFinalTest(Request $request)
+    public function addFinalTest(Request $request)
     {
         $data = $request->validate([
             'CourseId' => 'required|exists:courses,id',
@@ -830,6 +830,11 @@ class StaffController extends Controller
 
         if (!$course || $course->TeacherId !== $teacherId) {
             return response()->json(['message' => 'You are not authorized to create a final test for this course'], 403);
+        }
+
+        $alreadyHasFinalTest = $course->tests()->exists();
+        if ($alreadyHasFinalTest) {
+            return response()->json(['message' => 'This course already has a final test'], 400);
         }
 
         try {
