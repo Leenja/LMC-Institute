@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Repositories\StudentRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class StudentService
 {
@@ -245,6 +246,7 @@ class StudentService
         });
     }
 
+    //Can only access when it is last day and hour in course
     public function canAccessFinalTest($studentId, $testId): bool
     {
         $now = now();
@@ -270,7 +272,15 @@ class StudentService
         $startWindow = $endDate->copy()->setTimeFrom($startTime);
         $endWindow = $endDate->copy()->setTimeFrom($endTime);
 
+        Log::debug('FinalTestGate - time check', [
+            'now'         => $now->toDateTimeString(),
+            'endDate'     => $endDate->toDateTimeString(),
+            'startWindow' => $startWindow->toDateTimeString(),
+            'endWindow'   => $endWindow->toDateTimeString(),
+        ]);
+
         if (!$now->between($startWindow, $endWindow)) {
+            Log::debug('FinalTestGate - outside window');
             return false;
         }
 
@@ -278,7 +288,21 @@ class StudentService
             ->whereDate('created_at', $endDate->toDateString())
             ->exists();
 
+        Log::debug('FinalTestGate - attendance check', [
+            'studentId'     => $studentId,
+            'attendanceOk'  => $hasAttendance,
+        ]);
+
         return $hasAttendance;
+    }
+
+    public function getFinalTest($testId)
+    {
+        return Test::select('id','CourseId', 'TeacherId', 'Title', 'Duration', 'Mark')
+            ->with(['User:id,name'])
+            ->where('id', $testId)
+            ->first()
+            ->makeHidden('TeacherId');
     }
 
     //View flash cards

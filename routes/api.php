@@ -265,6 +265,8 @@ Route::middleware(['auth:sanctum', 'role:Student|SuperAdmin'])->prefix('student'
 
     Route::post("submitSelfTestAnswer", [StudentController::class, "submitSelfTestAnswer"]);
 
+    Route::get("getFinalTest/{testId}", [StudentController::class, "getFinalTest"]);
+
     Route::get("getFinalTestQuestion/{testId}", [StudentController::class,"getFinalTestQuestion"]);
 
     Route::get("getAllFinalTestQuestions/{testId}", [StudentController::class,"getAllFinalTestQuestions"]);

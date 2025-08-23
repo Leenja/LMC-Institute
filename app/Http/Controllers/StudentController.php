@@ -294,6 +294,30 @@ class StudentController extends Controller
         ]);
     }
 
+    public function getFinalTest($testId)
+    {
+        $studentId = auth()->id();
+
+        if (!$this->studentService->canAccessFinalTest($studentId, $testId)) {
+            return response()->json([
+                'message' => 'You can take the final test only during the last hour of the last course day,and you have to be attended.'
+            ], 403);
+        }
+
+        $finalTest = $this->studentService->getFinalTest($testId);
+
+        if (!$finalTest) {
+            return response()->json([
+                'message' => 'Final test not found.'
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Final test retrieved successfully.',
+            'Final Test' => $finalTest
+        ]);
+    }
+
     //Click when finish the test
     public function submitFinalTest(Request $request)
     {
