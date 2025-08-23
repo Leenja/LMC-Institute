@@ -139,6 +139,8 @@ Route::middleware(['auth:sanctum', 'role:Teacher|SuperAdmin'])->prefix('teacher'
 
     Route::get('reviewMyCourses', [StaffController::class, 'reviewMyCourses']);
 
+    Route::get("reviewCurrentCourses", [StaffController::class, "reviewCurrentCourses"]);
+
     Route::get('reviewSchedule', [StaffController::class, 'reviewSchedule']);
 
     Route::get('reviewStudentsNames/{courseId}', [StaffController::class, 'reviewStudentsNames']);

@@ -554,6 +554,23 @@ class StaffService
     public function viewCourse($courseId)
     {
         $course = Course::with(['User', 'Language', 'CourseSchedule'])->find($courseId);
+
+        if ($course && $course->CourseSchedule) {
+            $today = Carbon::now()->toDateString();
+
+            foreach ($course->CourseSchedule as $schedule) {
+                if ($today < $schedule->Start_Date) {
+                    $course->Status = 'Unactive';
+                } elseif ($today >= $schedule->Start_Date && $today <= $schedule->End_Date) {
+                    $course->Status = 'Active';
+                } elseif ($today > $schedule->End_Date) {
+                    $course->Status = 'Done';
+                }
+
+                $course->save();
+            }
+        }
+
         return $course;
     }
 
