@@ -514,7 +514,7 @@ class StudentController extends Controller
 
         $request->validate([
             'QuestionId' => 'required|exists:placement_test_questions,id',
-            'SelectedAnswerId' => 'required|exists:placement_test_answers,id',
+            'SelectedAnswerId' => 'nullable|exists:placement_test_answers,id',
         ]);
 
         $test = PlacementTest::where('GuestId', $userId)
@@ -526,10 +526,15 @@ class StudentController extends Controller
         }
 
         $question = PlacementTestQuestion::find($request->QuestionId);
-        $answer = PlacementTestAnswer::find($request->SelectedAnswerId);
 
-        if ($answer->QuestionId != $question->id) {
-            return response()->json(['message' => 'Answer does not belong to the question.'], 400);
+        $answer = null;
+
+        if ($request->SelectedAnswerId) {
+            $answer = PlacementTestAnswer::find($request->SelectedAnswerId);
+
+            if (!$answer || $answer->QuestionId != $question->id) {
+                return response()->json(['message' => 'Answer does not belong to the question.'], 400);
+            }
         }
 
         $alreadyAnswered = PlacementTestProgress::where('PlacementTestId', $test->id)
@@ -543,10 +548,10 @@ class StudentController extends Controller
         PlacementTestProgress::create([
             'PlacementTestId' => $test->id,
             'QuestionId' => $question->id,
-            'SelectedAnswerId' => $answer->id,
+            'SelectedAnswerId' => $answer?->id,
         ]);
 
-        if ($answer->isCorrect) {
+        if ($answer && $answer->isCorrect) {
             $test->increment('TotalScore');
 
             $scoreColumn = match ($question->Section) {
@@ -596,7 +601,9 @@ class StudentController extends Controller
         }
 
         return response()->json([
-            'message' => $answer->isCorrect ? 'Correct' : 'Incorrect',
+            'message' => $answer
+                ? ($answer->isCorrect ? 'Correct' : 'Incorrect')
+                : 'Time Over',
         ]);
     }
 

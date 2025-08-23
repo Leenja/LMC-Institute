@@ -40,6 +40,7 @@ class Course extends Model
     public function Lesson(){
         return $this->hasMany(Lesson::class, 'CourseId');
     }
+    
     public function lessons(){
         return $this->hasMany(Lesson::class, 'CourseId');
     }
