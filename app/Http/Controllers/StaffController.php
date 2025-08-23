@@ -9,6 +9,7 @@ use App\Models\Lesson;
 use App\Models\SelfTest;
 use App\Models\SelfTestQuestion;
 use App\Models\StaffInfo;
+use App\Models\Test;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\StaffService;
@@ -988,6 +989,23 @@ class StaffController extends Controller
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function getFinalTest($testId)
+    {
+        $teacherId = auth()->user()->id;
+
+        $test = Test::where('id', $testId)
+                    ->where('TeacherId', $teacherId)
+                    ->first();
+
+        if (!$test) {
+            return response()->json(['message' => 'Test not found'], 404);
+        }
+
+        return response()->json([
+            'Final Test' => $test
+        ]);
     }
 
     public function addFlashCard(Request $request)
