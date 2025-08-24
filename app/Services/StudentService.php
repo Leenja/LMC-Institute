@@ -247,19 +247,15 @@ class StudentService
     }
 
     //Can only access when it is last day and hour in course
-    public function canAccessFinalTest($studentId, $testId): bool
+    public function canAccessFinalTest($studentId, $courseId): bool
     {
         $now = now();
 
-        $courseSchedule = CourseSchedule::whereHas('course', function ($q) use ($studentId, $testId) {
-            $q->where('id', function ($sub) use ($testId) {
-                $sub->select('CourseId')
-                    ->from('tests')
-                    ->where('id', $testId);
-            })->whereHas('Enrollment', function ($q2) use ($studentId) {
-                $q2->where('StudentId', $studentId);
-            });
-        })->first();
+        $courseSchedule = CourseSchedule::where('CourseId', $courseId)
+            ->whereHas('course.Enrollment', function ($q) use ($studentId) {
+                $q->where('StudentId', $studentId);
+            })
+            ->first();
 
         if (!$courseSchedule) {
             return false;
@@ -289,18 +285,18 @@ class StudentService
             ->exists();
 
         Log::debug('FinalTestGate - attendance check', [
-            'studentId'     => $studentId,
-            'attendanceOk'  => $hasAttendance,
+            'studentId'    => $studentId,
+            'attendanceOk' => $hasAttendance,
         ]);
 
         return $hasAttendance;
     }
 
-    public function getFinalTest($testId)
+    public function getFinalTest($courseId)
     {
-        return Test::select('id','CourseId', 'TeacherId', 'Title', 'Duration', 'Mark')
+        return Test::select('id', 'CourseId', 'TeacherId', 'Title', 'Duration', 'Mark')
             ->with(['User:id,name'])
-            ->where('id', $testId)
+            ->where('CourseId', $courseId)
             ->first()
             ->makeHidden('TeacherId');
     }
