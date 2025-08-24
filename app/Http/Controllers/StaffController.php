@@ -991,16 +991,16 @@ class StaffController extends Controller
         }
     }
 
-    public function getFinalTest($testId)
+    public function getFinalTest($courseId)
     {
         $teacherId = auth()->user()->id;
 
-        $test = Test::where('id', $testId)
+        $test = Test::where('CourseId', $courseId)
                     ->where('TeacherId', $teacherId)
                     ->first();
 
         if (!$test) {
-            return response()->json(['message' => 'Test not found'], 404);
+            return response()->json(['message' => 'Test not found for this course or not assigned to you'], 404);
         }
 
         return response()->json([
