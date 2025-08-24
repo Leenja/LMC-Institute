@@ -633,6 +633,34 @@ class StaffController extends Controller
         ]);
     }
 
+    public function reviewCurrentCourses()
+    {
+        $teacherId = auth()->id();
+        $today = Carbon::now()->toDateString();
+
+        $courses = Course::where('TeacherId', $teacherId)
+            ->with(['CourseSchedule'])
+            ->get()
+            ->filter(function ($course) use ($today) {
+                $course->CourseSchedule->each(function ($schedule) use ($today, $course) {
+                    if ($today < $schedule->Start_Date) {
+                        $course->Status = 'Unactive';
+                    } elseif ($today >= $schedule->Start_Date && $today <= $schedule->End_Date) {
+                        $course->Status = 'Active';
+                    } elseif ($today > $schedule->End_Date) {
+                        $course->Status = 'Done';
+                    }
+                });
+
+                return in_array($course->Status, ['Active', 'Unactive']);
+            })
+            ->values();
+
+        return response()->json([
+            'Current Courses' => $courses
+        ]);
+    }
+
     public function reviewSchedule(Request $request)
     {
         $date = $request->input('date');
