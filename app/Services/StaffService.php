@@ -143,9 +143,6 @@ class StaffService
 
             $this->staffRepository->updateUserRole($data['StudentId'], 5);
 
-            // $this->staffRepository->updateUserRole($data['StudentId'], 'Student');
-
-
             $enrollment = $this->staffRepository->createEnrollment($data);
 
             $schedule = CourseSchedule::where('CourseId', $data['CourseId'])->first();
@@ -153,6 +150,24 @@ class StaffService
 
             app(RoomService::class)->assignRoomToCourse($schedule);
             app(RoomService::class)->optimizeRoomAssignments();
+
+            $course = $schedule->course;
+
+            $title = 'Enrollment Successful';
+            $body = "You are enrolled in " . ($course->language->Name) . " - Level " . ($course->Level);
+
+
+            $notification = \App\Models\Notification::create([
+                'title'        => $title,
+                'body'         => $body,
+                'target_roles' => ['SingleStudent'],
+            ]);
+
+            \App\Jobs\BackfillSpecificUserNotificationJob::dispatch($notification->id, [$data['StudentId']])
+                ->onQueue('notifications');
+
+             \App\Jobs\SendNotificationToTokensJob::dispatch($notification->id, [$data['StudentId']])
+                 ->onQueue('notifications');
 
             return $enrollment;
         });
@@ -207,7 +222,8 @@ class StaffService
         return $this->staffRepository->getEnrolledStudentsInCourse($courseId);
     }
 
-    public function viewEnrolledStudentsForLanguage($languageId) {
+    public function viewEnrolledStudentsForLanguage($languageId)
+    {
         return $this->staffRepository->getEnrolledStudentsForLanguage($languageId);
     }
 
@@ -260,17 +276,6 @@ class StaffService
 
             $course = $this->staffRepository->createCourse($data);
 
-            /* $schedule = $this->staffRepository->createSchedule($course->id, [
-                'RoomId' => $roomId,
-                'Start_Enroll' => $data['Start_Enroll'],
-                'End_Enroll' => $data['End_Enroll'],
-                'Start_Date' => Carbon::parse($data['Start_Date'])->setTimeFromTimeString($data['Start_Time']),
-                'End_Date' => $endDate,
-                'Start_Time' => $data['Start_Time'],
-                'End_Time' => $data['End_Time'],
-                'CourseDays' => $data['CourseDays'],
-            ]);*/
-
             //  $holidays = Holiday::pluck('date')->map(fn($d) => Carbon::parse($d)->toDateString())->toArray();
             $holidays = Holiday::all()->flatMap(function ($holiday) {
                 $start = Carbon::parse($holiday->StartDate);
@@ -280,7 +285,6 @@ class StaffService
                     return $start->copy()->addDays($i)->toDateString();
                 });
             })->toArray();
-
 
             $lessons = $this->generateLessons(
                 $course->id,
@@ -554,6 +558,23 @@ class StaffService
     public function viewCourse($courseId)
     {
         $course = Course::with(['User', 'Language', 'CourseSchedule'])->find($courseId);
+
+        if ($course && $course->CourseSchedule) {
+            $today = Carbon::now()->toDateString();
+
+            foreach ($course->CourseSchedule as $schedule) {
+                if ($today < $schedule->Start_Date) {
+                    $course->Status = 'Unactive';
+                } elseif ($today >= $schedule->Start_Date && $today <= $schedule->End_Date) {
+                    $course->Status = 'Active';
+                } elseif ($today > $schedule->End_Date) {
+                    $course->Status = 'Done';
+                }
+
+                $course->save();
+            }
+        }
+
         return $course;
     }
 
@@ -723,7 +744,7 @@ class StaffService
             return ['error' => 'Student is not enrolled in this course'];
         }
 
-         $isEnrolled = DB::table('enrollments')
+        $isEnrolled = DB::table('enrollments')
             ->where('CourseId', $lesson->CourseId)
             ->where('StudentId', $studentId)
             ->exists();
@@ -752,7 +773,6 @@ class StaffService
         $this->staffRepository->updateStudentProgress($studentId, $lesson->CourseId);
 
         return ['success' => 'Attendance record created'];
-
     }
 
     //Add,edit,delete Self Test

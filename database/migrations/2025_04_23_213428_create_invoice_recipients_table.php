@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('invoice_recipients', function (Blueprint $table) {
-               $table->id();
-    $table->foreignId('InvoiceId')->constrained('invoices');
-    $table->foreignId('UserId')->constrained('users');
-    $table->enum('Status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
-    $table->timestamps();
+            $table->id();
+            $table->foreignId('InvoiceId')->constrained('invoices');
+            $table->foreignId('UserId')->constrained('users');
+            $table->enum('Status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
+            $table->timestamps();
         });
     }
 

@@ -1,17 +1,13 @@
 <?php
 
-namespace App\Providers;
+/*namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Kreait\Firebase\Factory;
 
 class FirebaseServiceProvider extends ServiceProvider
 {
-    /*
-     * Register any application services.
-     *
-     * @return void
-     */
+  
     public function register()
     {
         $this->app->singleton('firebase', function ($app) {
@@ -22,13 +18,34 @@ class FirebaseServiceProvider extends ServiceProvider
         });
     }
 
-    /*
-     * Bootstrap any application services.
-     *
-     * @return void
-     */
     public function boot()
     {
         //
     }
+}*/
+
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Kreait\Firebase\Factory;
+use Kreait\Firebase\Contract\Messaging;
+
+class FirebaseServiceProvider extends ServiceProvider
+{
+    public function register()
+    {
+        $this->app->singleton(Messaging::class, function () {
+            $factory = (new Factory)
+                ->withServiceAccount(config('services.firebase.credentials'));
+
+            if ($url = config('services.firebase.database_url')) {
+                $factory = $factory->withDatabaseUri($url);
+            }
+
+            return $factory->createMessaging();
+        });
+    }
+
+    public function boot() {}
 }

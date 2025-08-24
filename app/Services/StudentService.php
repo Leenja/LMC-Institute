@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Repositories\StudentRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class StudentService
 {
@@ -245,19 +246,16 @@ class StudentService
         });
     }
 
-    public function canAccessFinalTest($studentId, $testId): bool
+    //Can only access when it is last day and hour in course
+    public function canAccessFinalTest($studentId, $courseId): bool
     {
         $now = now();
 
-        $courseSchedule = CourseSchedule::whereHas('course', function ($q) use ($studentId, $testId) {
-            $q->where('id', function ($sub) use ($testId) {
-                $sub->select('CourseId')
-                    ->from('tests')
-                    ->where('id', $testId);
-            })->whereHas('Enrollment', function ($q2) use ($studentId) {
-                $q2->where('StudentId', $studentId);
-            });
-        })->first();
+        $courseSchedule = CourseSchedule::where('CourseId', $courseId)
+            ->whereHas('course.Enrollment', function ($q) use ($studentId) {
+                $q->where('StudentId', $studentId);
+            })
+            ->first();
 
         if (!$courseSchedule) {
             return false;
@@ -270,7 +268,15 @@ class StudentService
         $startWindow = $endDate->copy()->setTimeFrom($startTime);
         $endWindow = $endDate->copy()->setTimeFrom($endTime);
 
+        Log::debug('FinalTestGate - time check', [
+            'now'         => $now->toDateTimeString(),
+            'endDate'     => $endDate->toDateTimeString(),
+            'startWindow' => $startWindow->toDateTimeString(),
+            'endWindow'   => $endWindow->toDateTimeString(),
+        ]);
+
         if (!$now->between($startWindow, $endWindow)) {
+            Log::debug('FinalTestGate - outside window');
             return false;
         }
 
@@ -278,7 +284,21 @@ class StudentService
             ->whereDate('created_at', $endDate->toDateString())
             ->exists();
 
+        Log::debug('FinalTestGate - attendance check', [
+            'studentId'    => $studentId,
+            'attendanceOk' => $hasAttendance,
+        ]);
+
         return $hasAttendance;
+    }
+
+    public function getFinalTest($courseId)
+    {
+        return Test::select('id', 'CourseId', 'TeacherId', 'Title', 'Duration', 'Mark')
+            ->with(['User:id,name'])
+            ->where('CourseId', $courseId)
+            ->first()
+            ->makeHidden('TeacherId');
     }
 
     //View flash cards

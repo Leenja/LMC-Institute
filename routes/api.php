@@ -48,7 +48,7 @@ Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->g
 
     Route::post('addHoliday', [HolidayController::class, 'addHoliday']);
 
-    //Route::post('deleteHoliday/{id}', [HolidayController::class, 'deleteHoliday']);
+    Route::delete('deleteHoliday/{id}', [HolidayController::class, 'deleteHoliday']);
 
     Route::post('assignTask', [TaskController::class, 'assignTask']);
 
@@ -139,6 +139,8 @@ Route::middleware(['auth:sanctum', 'role:Teacher|SuperAdmin'])->prefix('teacher'
 
     Route::get('reviewMyCourses', [StaffController::class, 'reviewMyCourses']);
 
+    Route::get("reviewCurrentCourses", [StaffController::class, "reviewCurrentCourses"]);
+
     Route::get('reviewSchedule', [StaffController::class, 'reviewSchedule']);
 
     Route::get('reviewStudentsNames/{courseId}', [StaffController::class, 'reviewStudentsNames']);
@@ -156,6 +158,8 @@ Route::middleware(['auth:sanctum', 'role:Teacher|SuperAdmin'])->prefix('teacher'
     Route::delete('deleteSelfTestQuestion/{selfTestQuestionId}', [StaffController::class, 'deleteSelfTestQuestion']);
 
     Route::post('addFinalTest', [StaffController::class, 'addFinalTest']);
+
+    Route::get("getFinalTest/{courseId}", [StaffController::class, "getFinalTest"]);
 
     Route::post('addFinalTestQuestion', [StaffController::class, 'addFinalTestQuestion']);
 
@@ -264,6 +268,8 @@ Route::middleware(['auth:sanctum', 'role:Student|SuperAdmin'])->prefix('student'
     Route::get("getSelfTestQuestions/{selfTestId}", [StudentController::class, "getSelfTestQuestions"]);
 
     Route::post("submitSelfTestAnswer", [StudentController::class, "submitSelfTestAnswer"]);
+
+    Route::get("getFinalTest/{courseId}", [StudentController::class, "getFinalTest"]);
 
     Route::get("getFinalTestQuestion/{testId}", [StudentController::class,"getFinalTestQuestion"]);
 
@@ -395,6 +401,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('getUnreadCount', [FirebaseTokenController::class, 'getUnreadCount']);
 
-    Route::post('markAsRead', [FirebaseTokenController::class, 'markAsRead']);
+    Route::post('markAsRead/{id}', [FirebaseTokenController::class, 'markAsRead']);
 
 });

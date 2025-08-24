@@ -186,7 +186,7 @@ class StudentController extends Controller
 
     public function getSelfTestsByLesson($lessonId)
     {
-        if (!\App\Models\Lesson::where('id', $lessonId)->exists()) {
+        if (!Lesson::where('id', $lessonId)->exists()) {
             return response()->json(['message' => 'Lesson not found'], 404);
         }
 
@@ -291,6 +291,30 @@ class StudentController extends Controller
         return response()->json([
             'message' => 'All final test questions retrieved successfully.',
             'questions' => $questions,
+        ]);
+    }
+
+    public function getFinalTest($courseId)
+    {
+        $studentId = auth()->id();
+
+        if (!$this->studentService->canAccessFinalTest($studentId, $courseId)) {
+            return response()->json([
+                'message' => 'You can take the final test only during the last hour of the last course day, and you must have attended.'
+            ], 403);
+        }
+
+        $finalTest = $this->studentService->getFinalTest($courseId);
+
+        if (!$finalTest) {
+            return response()->json([
+                'message' => 'Final test not found for this course.'
+            ], 404);
+        }
+
+        return response()->json([
+            'message'    => 'Final test retrieved successfully.',
+            'Final Test' => $finalTest
         ]);
     }
 
@@ -514,7 +538,7 @@ class StudentController extends Controller
 
         $request->validate([
             'QuestionId' => 'required|exists:placement_test_questions,id',
-            'SelectedAnswerId' => 'required|exists:placement_test_answers,id',
+            'SelectedAnswerId' => 'nullable|exists:placement_test_answers,id',
         ]);
 
         $test = PlacementTest::where('GuestId', $userId)
@@ -526,10 +550,15 @@ class StudentController extends Controller
         }
 
         $question = PlacementTestQuestion::find($request->QuestionId);
-        $answer = PlacementTestAnswer::find($request->SelectedAnswerId);
 
-        if ($answer->QuestionId != $question->id) {
-            return response()->json(['message' => 'Answer does not belong to the question.'], 400);
+        $answer = null;
+
+        if ($request->SelectedAnswerId) {
+            $answer = PlacementTestAnswer::find($request->SelectedAnswerId);
+
+            if (!$answer || $answer->QuestionId != $question->id) {
+                return response()->json(['message' => 'Answer does not belong to the question.'], 400);
+            }
         }
 
         $alreadyAnswered = PlacementTestProgress::where('PlacementTestId', $test->id)
@@ -543,10 +572,10 @@ class StudentController extends Controller
         PlacementTestProgress::create([
             'PlacementTestId' => $test->id,
             'QuestionId' => $question->id,
-            'SelectedAnswerId' => $answer->id,
+            'SelectedAnswerId' => $answer?->id,
         ]);
 
-        if ($answer->isCorrect) {
+        if ($answer && $answer->isCorrect) {
             $test->increment('TotalScore');
 
             $scoreColumn = match ($question->Section) {
@@ -596,7 +625,9 @@ class StudentController extends Controller
         }
 
         return response()->json([
-            'message' => $answer->isCorrect ? 'Correct' : 'Incorrect',
+            'message' => $answer
+                ? ($answer->isCorrect ? 'Correct' : 'Incorrect')
+                : 'Time Over',
         ]);
     }
 

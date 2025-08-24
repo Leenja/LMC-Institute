@@ -79,7 +79,7 @@ class UserRepository
                  ->get();
     }
 
-    public function getByRoleId(int $roleId, int $excludeUserId = null): Collection
+    public function getByRoleId(int $roleId, ?int $excludeUserId = null): Collection
     {
         $query = User::where('role_id', $roleId);
 

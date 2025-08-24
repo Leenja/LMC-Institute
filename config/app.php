@@ -185,6 +185,7 @@ return [
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         App\Providers\EventServiceProvider::class,
+        App\Providers\FirebaseServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
 
         // ✅ Add the Spatie Permission Service Provider

@@ -9,6 +9,7 @@ use App\Models\Lesson;
 use App\Models\SelfTest;
 use App\Models\SelfTestQuestion;
 use App\Models\StaffInfo;
+use App\Models\Test;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\StaffService;
@@ -316,6 +317,8 @@ class StaffController extends Controller
             ], 400);
         }
 
+
+
         return response()->json(
             $this->staffService->enrollStudent($data)
         );
@@ -420,9 +423,45 @@ class StaffController extends Controller
             $data['Photo'] = $imageUrl;
         }
 
-        return response()->json(
-            $this->staffService->createCourseWithSchedule($data)
+        $result = $this->staffService->createCourseWithSchedule($data);
+
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        $course   = $result['Course'];
+        $schedule = $result['Schedule'];
+
+        $title = 'New course added';
+        $body  = sprintf(
+            "Language: %s، Level: %s\nStart At: %s %s",
+            optional($course->language ?? null)->Name ?? '-',
+            $course->Level,
+            Carbon::parse($schedule['Start_Date'] ?? $schedule->Start_Date ?? $data['Start_Date'])->toDateString(),
+            $data['Start_Time']
         );
+
+        $roles = Role::pluck('name')->all();
+
+        $notification = \App\Models\Notification::create([
+            'title'        => $title,
+            'body'         => $body,
+            'target_roles' => $roles,
+        ]);
+
+        \App\Jobs\BackfillUserNotificationsJob::dispatch($notification->id, $roles)
+            ->onQueue('notifications');
+
+        \App\Jobs\SendNotificationToTopicsJob::dispatch($notification->id, $roles)
+            ->onQueue('notifications');
+
+        return response()->json([
+            'Course'     => $course,
+            'Schedule'   => $schedule,
+            'Lessons'    => $result['Lessons'],
+            'message'    => 'Course created and notification queued.',
+            'notification_id' => $notification->id,
+        ], 201);
     }
 
     public function editCourse(Request $request)
@@ -555,6 +594,18 @@ class StaffController extends Controller
             ->with(['CourseSchedule.Room', 'Language', 'User'])
             ->get()
             ->map(function ($course) {
+                $today = Carbon::now()->toDateString();
+                $course->CourseSchedule->each(function ($schedule) use ($today, $course) {
+                    if ($today < $schedule->Start_Date) {
+                        $course->Status = 'Unactive';
+                    } elseif ($today >= $schedule->Start_Date && $today <= $schedule->End_Date) {
+                        $course->Status = 'Active';
+                    } elseif ($today > $schedule->End_Date) {
+                        $course->Status = 'Done';
+                    }
+                    $course->save();
+                });
+
                 $schedule = $course->CourseSchedule->first();
 
                 return [
@@ -589,6 +640,34 @@ class StaffController extends Controller
         $result = $this->staffService->getScheduleByDate($date);
 
         return response()->json($result);
+    }
+
+    public function reviewCurrentCourses()
+    {
+        $teacherId = auth()->id();
+        $today = Carbon::now()->toDateString();
+
+        $courses = Course::where('TeacherId', $teacherId)
+            ->with(['CourseSchedule'])
+            ->get()
+            ->filter(function ($course) use ($today) {
+                $course->CourseSchedule->each(function ($schedule) use ($today, $course) {
+                    if ($today < $schedule->Start_Date) {
+                        $course->Status = 'Unactive';
+                    } elseif ($today >= $schedule->Start_Date && $today <= $schedule->End_Date) {
+                        $course->Status = 'Active';
+                    } elseif ($today > $schedule->End_Date) {
+                        $course->Status = 'Done';
+                    }
+                });
+
+                return in_array($course->Status, ['Active', 'Unactive']);
+            })
+            ->values();
+
+        return response()->json([
+            'Current Courses' => $courses
+        ]);
     }
 
     public function reviewStudentsNames($courseId)
@@ -816,7 +895,7 @@ class StaffController extends Controller
         }
     }
 
-        public function addFinalTest(Request $request)
+    public function addFinalTest(Request $request)
     {
         $data = $request->validate([
             'CourseId' => 'required|exists:courses,id',
@@ -830,6 +909,11 @@ class StaffController extends Controller
 
         if (!$course || $course->TeacherId !== $teacherId) {
             return response()->json(['message' => 'You are not authorized to create a final test for this course'], 403);
+        }
+
+        $alreadyHasFinalTest = $course->tests()->exists();
+        if ($alreadyHasFinalTest) {
+            return response()->json(['message' => 'This course already has a final test'], 400);
         }
 
         try {
@@ -943,6 +1027,23 @@ class StaffController extends Controller
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function getFinalTest($courseId)
+    {
+        $teacherId = auth()->user()->id;
+
+        $test = Test::where('CourseId', $courseId)
+                    ->where('TeacherId', $teacherId)
+                    ->first();
+
+        if (!$test) {
+            return response()->json(['message' => 'Test not found for this course or not assigned to you'], 404);
+        }
+
+        return response()->json([
+            'Final Test' => $test
+        ]);
     }
 
     public function addFlashCard(Request $request)
@@ -1120,9 +1221,8 @@ class StaffController extends Controller
         $teacherName = auth()->user()->name;
 
         return response()->json([
-            'message' => 'Teacher '. $teacherName. ' log retrieved successfully.',
+            'message' => 'Teacher ' . $teacherName . ' log retrieved successfully.',
             'data' => $log,
         ]);
     }
-
 }

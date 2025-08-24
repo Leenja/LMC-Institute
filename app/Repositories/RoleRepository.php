@@ -7,6 +7,8 @@ use Spatie\Permission\Models\Role;
 
 class RoleRepository
 {
+    /**تشير إلى اسم "الحارس" أو "الحماية" (Guard) 
+     * التي يُستخدمها نظام المصادقة (Authentication) للتحكم في طريقة التحقق من هوية المستخدم */
     public function findRoleById($id)
     {
         return Role::where('id', $id)

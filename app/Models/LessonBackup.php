@@ -12,6 +12,7 @@ class LessonBackup extends Model
     use HasFactory;
     protected $fillable = [
         "CourseId",
+        "holiday_id",
         "Title",
         "Date","Start_Time" ,/*"isRecurring",*/"End_Time"
     ] ;
