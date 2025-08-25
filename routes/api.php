@@ -88,14 +88,6 @@ Route::middleware(['auth:sanctum', 'role:SuperAdmin'])->prefix('super-admin')->g
 
     Route::delete('deletePlacementTestQuestion/{id}', [ManagerController::class, 'deletePlacementTestQuestion']);
 
-    Route::get('reviewFinalGrades', [ManagerController::class, 'reviewFinalGrades']);
-
-    Route::get('reviewFinalGradesForCourse/{id}', [ManagerController::class, 'reviewFinalGradesForCourse']);
-
-    Route::get('reviewFinalGradeForStudent/{id}', [ManagerController::class, 'reviewFinalGradeForStudent']);
-
-    Route::get('getTopStudentForCourse/{id}', [ManagerController::class, 'getTopStudentForCourse']);
-
     Route::get('getRoles', [StaffController::class, 'getRoles']);
 
     Route::get('getUsersByRoleId/{roleId}', [StaffController::class, 'getUsersByRoleId']);
@@ -244,6 +236,14 @@ Route::middleware(['auth:sanctum', 'role:Secretarya|SuperAdmin'])->prefix('secre
     Route::get("getGuestStudent", [StaffController::class, "getGuestStudent"]);
 
     Route::post('try-send-notification', [FirebaseTokenController::class, 'sendTestNotification']);
+
+    Route::get('reviewFinalGrades', [ManagerController::class, 'reviewFinalGrades']);
+
+    Route::get('reviewFinalGradesForCourse/{id}', [ManagerController::class, 'reviewFinalGradesForCourse']);
+
+    Route::get('reviewFinalGradeForStudent/{id}', [ManagerController::class, 'reviewFinalGradeForStudent']);
+
+    Route::get('getTopStudentForCourse/{id}', [ManagerController::class, 'getTopStudentForCourse']);
 
 });
 
