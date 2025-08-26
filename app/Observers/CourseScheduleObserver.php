@@ -3,10 +3,7 @@
 namespace App\Observers;
 
 use App\Models\CourseSchedule;
-use App\Models\Lesson;
-use App\Models\Room;
 use App\Services\RoomService;
-use Carbon\Carbon;
 
 class CourseScheduleObserver
 {

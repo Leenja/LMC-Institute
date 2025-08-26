@@ -126,8 +126,14 @@ class RoomService
         }
 
         if ($needsReassignment) {
+
+            if ($currentRoom) {
+                $currentRoom->Status = 'Available';
+                $currentRoom->save();
+            }
             // Get rooms that can fit the student count
-            $availableRooms = Room::where('Capacity', '>=', $studentCount)->get();
+            $availableRooms = Room::where('Capacity', '>=', $studentCount)
+                                  ->where('Status', 'Available')->get();
 
             // Filter out conflicting rooms
             $conflictFreeRooms = $availableRooms->filter(function ($room) use ($schedule) {
@@ -139,6 +145,9 @@ class RoomService
                 $selectedRoom = $conflictFreeRooms->sortBy('Capacity')->first();
                 $schedule->RoomId = $selectedRoom->id;
                 $schedule->save();
+
+                $selectedRoom->Status = 'NotAvailable';
+                $selectedRoom->save();
             }
         }
     }

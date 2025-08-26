@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('rooms', function (Blueprint $table) {
             $table->id();
             $table->integer('Capacity');
-            //$table->boolean('isAvailable');
             $table->string('NumberOfRoom');
             $table->enum('Status', ['Available','NotAvailable'])->default('Available');
             $table->timestamps();
