@@ -352,7 +352,8 @@ class StaffController extends Controller
 
     public function getAllEnrolledStudents()
     {
-        return Enrollment::all()
+        return Enrollment::where('isPrivate', 0)
+            ->get()
             ->map(function ($enrollment) {
                 $student = User::find($enrollment->StudentId);
                 return [

@@ -55,6 +55,7 @@ class StaffRepository
     public function getEnrolledStudentsInCourse($courseId)
     {
         return Enrollment::where('CourseId', $courseId)
+            ->where('isPrivate', 0)
             ->get()
             ->map(function ($enrollment) {
                 $student = User::find($enrollment->StudentId);

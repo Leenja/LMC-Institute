@@ -112,7 +112,9 @@ class RoomService
 
     public function assignRoomToCourse(CourseSchedule $schedule)
     {
-        $studentCount = $schedule->course->Enrollment()->count();
+        $studentCount = $schedule->course->Enrollment()
+                                         ->where('isPrivate', 0)
+                                         ->count();
 
         // Determine if the current room is still valid
         $currentRoom = $schedule->RoomId ? Room::find($schedule->RoomId) : null;
