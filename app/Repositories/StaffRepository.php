@@ -387,6 +387,13 @@ class StaffRepository
             throw new Exception('You are not authorized to add questions to this test');
         }
 
+        $currentPoints = $test->questions()->sum('Point');
+        $newTotal = $currentPoints + $data['Point'];
+
+        if ($newTotal > $test->Mark) {
+            throw new Exception("Total points exceed the test's mark ({$test->Mark}). Current = {$currentPoints}, adding = {$data['Point']}");
+        }
+
         if ($mediaFile) {
             $fileName = time() . '_' . $mediaFile->getClientOriginalName();
             $mediaFile->move(public_path('storage/FinalTestsMedia'), $fileName);
@@ -402,6 +409,17 @@ class StaffRepository
 
         if (!$question || $question->Test->TeacherId !== $teacherId) {
             throw new Exception('You are not authorized to edit this test question');
+        }
+
+        $test = $question->Test;
+
+        $currentPoints = $test->questions()
+                              ->where('id', '!=', $question->id)->sum('Point');
+
+        $newTotal = $currentPoints + $data['Point'];
+
+        if ($newTotal > $test->Mark) {
+            throw new Exception("Total points exceed the test's mark ({$test->Mark}). Current (without this) = {$currentPoints}, new point = {$data['Point']}");
         }
 
         if ($mediaFile) {
