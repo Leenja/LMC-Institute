@@ -37,6 +37,7 @@ class FirebaseTokenController extends Controller
         return response()->json(['message' => 'Firebase token updated successfully.']);
     }*/
 
+    /*28-8
     public function update(Request $request)
     {
         $request->validate([
@@ -44,7 +45,6 @@ class FirebaseTokenController extends Controller
             'oldFirebaseToken' => 'nullable|string',
         ]);
 
-        /** @var \App\Models\User $user */
         $user = auth()->user();
 
         // احذف التوكن القديم إن أُرسل
@@ -61,12 +61,52 @@ class FirebaseTokenController extends Controller
 
         // اشترك/ألغِ اشتراك في Topics الأدوار
         $topics = $user->getRoleNames()->map(fn($r) => 'role_' . trim($r))->values()->all();
-        /** @var \App\Services\FirebaseService $fcm */
         $fcm = app(\App\Services\FirebaseService::class);
 
         if ($oldToken !== '') {
             $fcm->unsubscribeTokensFromTopics([$oldToken], $topics);
         }
+        $fcm->subscribeTokensToTopics([$request->newFirebaseToken], $topics);
+
+        return response()->json(['message' => 'Firebase token updated successfully.']);
+    }*/
+
+    public function update(Request $request)
+    {
+        $request->validate([
+            'newFirebaseToken' => 'required|string',
+            'oldFirebaseToken' => 'nullable|string',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        // احذف التوكن القديم إن أُرسل (خاص بالمستخدم الحالي فقط)
+        if ($request->filled('oldFirebaseToken')) {
+            \App\Models\DeviceToken::where('user_id', $user->id)
+                ->where('device_key', $request->oldFirebaseToken)
+                ->delete();
+        }
+
+        // upsert للتوكن الجديد بحيث يكون (user_id + device_key) فريد
+        \App\Models\DeviceToken::updateOrCreate(
+            [
+                'user_id'    => $user->id,
+                'device_key' => $request->newFirebaseToken,
+            ],
+            [] // مافي بيانات إضافية للتحديث
+        );
+
+        // اشترك/ألغِ اشتراك في Topics الأدوار
+        $topics = $user->getRoleNames()->map(fn($r) => 'role_' . trim($r))->values()->all();
+
+        /** @var \App\Services\FirebaseService $fcm */
+        $fcm = app(\App\Services\FirebaseService::class);
+
+        if ($request->filled('oldFirebaseToken')) {
+            $fcm->unsubscribeTokensFromTopics([$request->oldFirebaseToken], $topics);
+        }
+
         $fcm->subscribeTokensToTopics([$request->newFirebaseToken], $topics);
 
         return response()->json(['message' => 'Firebase token updated successfully.']);
@@ -293,7 +333,7 @@ class FirebaseTokenController extends Controller
     }*/
 
     //5 august
-    
+
     /*function sendNotificationToUser($userId, $title, $body)
     {
         $tokens = DeviceToken::where('user_id', $userId)->pluck('device_token')->toArray();
