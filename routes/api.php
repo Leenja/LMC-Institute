@@ -279,6 +279,8 @@ Route::middleware(['auth:sanctum', 'role:Student|SuperAdmin'])->prefix('student'
 
     Route::post("submitFinalTest", [StudentController::class,"submitFinalTest"]);
 
+    Route::post('getFinalTestScore', [StudentController::class , "getFinalTestScore"]);
+
     Route::get("viewAllFlashCards", [StudentController::class, "viewAllFlashCards"]);
 
     Route::get("viewFlashCard/{flashcardId}", [StudentController::class, "viewFlashCard"]);

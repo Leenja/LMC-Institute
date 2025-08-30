@@ -318,6 +318,27 @@ class StudentController extends Controller
         ]);
     }
 
+    public function getFinalTestScore($courseId)
+    {
+        $studentId = auth()->id();
+
+        $finalGrade = DB::table('final_grades')
+                        ->where('StudentId', $studentId)
+                        ->where('CourseId', $courseId)
+                        ->first();
+
+        if (!$finalGrade) {
+            return response()->json([
+                'message' => 'Final grade not found for this course.'
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Final test score retrieved successfully.',
+            'Test Score' => $finalGrade->FinalTestScore
+        ]);
+    }
+
     //Click when finish the test
     public function submitFinalTest(Request $request)
     {
